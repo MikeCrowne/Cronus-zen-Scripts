@@ -1,0 +1,457 @@
+// ========= FADEXZ'S MENU TEMPLATE GPC 1.0 =========
+// 2024 | Built for Cronus Zen | Universal OLED Menu System
+// See: https://guide.cronus.support/gpc for all GPC 1.0 rules
+
+// ------------ DEFINES ------------
+define OLED_TIMEOUT    = 8000; // ms to keep OLED on after last button press
+define TITLE_TIMEOUT   = 3000; // ms to show title screen
+
+// Button mappings for menu navigation
+define BTN_MENU_UP     = PS4_UP;
+define BTN_MENU_DOWN   = PS4_DOWN;
+define BTN_MENU_LEFT   = PS4_LEFT;
+define BTN_MENU_RIGHT  = PS4_RIGHT;
+define BTN_MENU_ENTER  = PS4_CROSS;
+define BTN_MENU_BACK   = PS4_CIRCLE;
+
+// Menu states
+define MENU_STATE_TITLE    = 0;
+define MENU_STATE_MAIN     = 1;
+define MENU_STATE_MOD_LIST = 2;
+define MENU_STATE_EDIT     = 3;
+
+// ------------ ENUMS ------------
+enum {
+    // -- Mod index constants
+    TJ_Turbo_Jump_Toggle_Idx = 0,
+    AR_Anti_Recoil_Toggle_Idx,
+    RF_Rapid_Fire_Toggle_Idx,
+    AA_Aim_Assist_Toggle_Idx,
+    _End_Mod_Plus_One_Idx_,
+    
+    // -- Edit index constants  
+    TJ_Jump_Wait_Time_Idx = 0,
+    AR_Strength_Idx,
+    AR_Horizontal_Idx,
+    RF_Rate_Idx,
+    RF_Burst_Idx,
+    AA_Shape_Idx,
+    AA_Speed_Idx,
+    _End_Edit_Plus_One_Idx_,
+    
+    // -- Main menu categories
+    All_Category_Idx = 0,
+    Aim_Fire_Category_Idx,
+    Movement_Category_Idx,
+    Misc_Category_Idx,
+    Settings_Category_Idx,
+    _End_Category_Plus_One_Idx_
+};
+
+// ------------ GLOBAL VARS (GPC 1.0: All global!) ------------
+int mod[_End_Mod_Plus_One_Idx_];
+int edit[_End_Edit_Plus_One_Idx_];
+int menu_active;
+int menu_state;
+int menu_timeout;
+int title_timeout;
+int current_category;
+int current_mod_in_category;
+int current_edit_in_mod;
+int show_splash;
+
+// Navigation variables
+int i, j, temp_idx;
+
+// ------------ DISPLAY STRINGS ------------
+const string Main_Menu_Strings[] = {
+    "All",
+    "Aim + Fire", 
+    "Movement",
+    "Misc",
+    "Settings"
+};
+
+const string Mod_Title_Strings[] = {
+    "Turbo Jump",
+    "Anti Recoil",
+    "Rapid Fire", 
+    "Aim Assist"
+};
+
+const string Edit_Title_Strings[] = {
+    "Delay",
+    "Strength",
+    "Horizontal",
+    "Rate",
+    "Burst", 
+    "Shape",
+    "Speed"
+};
+
+// Default values for each mod's editable parameters
+const int16 TJ_Jump_Wait_Time = 20;
+const int16 AR_Default_Strength = 50;
+const int16 AR_Default_Horizontal = 30;
+const int16 RF_Default_Rate = 15;
+const int16 RF_Default_Burst = 3;
+const int16 AA_Default_Shape = 1;
+const int16 AA_Default_Speed = 25;
+
+// ------------ INIT ------------
+init {
+    // Initialize all mod toggles to OFF
+    for(i = 0; i < _End_Mod_Plus_One_Idx_; i++) {
+        mod[i] = FALSE;
+    }
+    
+    // Initialize all edit values to their defaults
+    edit[TJ_Jump_Wait_Time_Idx] = TJ_Jump_Wait_Time;
+    edit[AR_Strength_Idx] = AR_Default_Strength;
+    edit[AR_Horizontal_Idx] = AR_Default_Horizontal;
+    edit[RF_Rate_Idx] = RF_Default_Rate;
+    edit[RF_Burst_Idx] = RF_Default_Burst;
+    edit[AA_Shape_Idx] = AA_Default_Shape;
+    edit[AA_Speed_Idx] = AA_Default_Speed;
+    
+    // Menu state initialization
+    menu_active = FALSE;
+    menu_state = MENU_STATE_TITLE;
+    current_category = 0;
+    current_mod_in_category = 0;
+    current_edit_in_mod = 0;
+    show_splash = TRUE;
+}
+
+// ------------ MAIN LOOP ------------
+main {
+    // Your mod logic goes here - example:
+    if(mod[TJ_Turbo_Jump_Toggle_Idx]) {
+        // Turbo Jump logic using edit[TJ_Jump_Wait_Time_Idx] for delay
+    }
+    
+    if(mod[AR_Anti_Recoil_Toggle_Idx]) {
+        // Anti-recoil logic using edit[AR_Strength_Idx] and edit[AR_Horizontal_Idx]
+    }
+    
+    if(mod[RF_Rapid_Fire_Toggle_Idx]) {
+        // Rapid fire logic using edit[RF_Rate_Idx] and edit[RF_Burst_Idx]
+    }
+    
+    if(mod[AA_Aim_Assist_Toggle_Idx]) {
+        // Aim assist logic using edit[AA_Shape_Idx] and edit[AA_Speed_Idx]
+    }
+    
+    // Menu activation: Hold LT + Press Menu/Options
+    if(get_val(PS4_L2) && event_press(PS4_OPTIONS)) {
+        menu_active = TRUE;
+        menu_state = MENU_STATE_TITLE;
+        menu_timeout = system_time() + OLED_TIMEOUT;
+        title_timeout = system_time() + TITLE_TIMEOUT;
+        show_splash = TRUE;
+        combo_run(OLED_Wake);
+    }
+    
+    // Handle menu navigation
+    if(menu_active) {
+        MenuHandler();
+    }
+    
+    // Auto timeout OLED menu
+    if(menu_active && system_time() > menu_timeout) {
+        menu_active = FALSE;
+        combo_run(OLED_Sleep);
+    }
+}
+
+// ------------ HELPER FUNCTIONS FOR CONFIGURATION ------------
+function GetCategoryMinMod(cat_idx) {
+    if(cat_idx == All_Category_Idx) return TJ_Turbo_Jump_Toggle_Idx;
+    if(cat_idx == Aim_Fire_Category_Idx) return AR_Anti_Recoil_Toggle_Idx;
+    if(cat_idx == Movement_Category_Idx) return TJ_Turbo_Jump_Toggle_Idx;
+    if(cat_idx == Misc_Category_Idx) return RF_Rapid_Fire_Toggle_Idx;
+    return 255; // Settings has no mods
+}
+
+function GetCategoryMaxMod(cat_idx) {
+    if(cat_idx == All_Category_Idx) return AA_Aim_Assist_Toggle_Idx;
+    if(cat_idx == Aim_Fire_Category_Idx) return AA_Aim_Assist_Toggle_Idx;
+    if(cat_idx == Movement_Category_Idx) return TJ_Turbo_Jump_Toggle_Idx;
+    if(cat_idx == Misc_Category_Idx) return RF_Rapid_Fire_Toggle_Idx;
+    return 255; // Settings has no mods
+}
+
+function GetModMinEdit(mod_idx) {
+    if(mod_idx == TJ_Turbo_Jump_Toggle_Idx) return TJ_Jump_Wait_Time_Idx;
+    if(mod_idx == AR_Anti_Recoil_Toggle_Idx) return AR_Strength_Idx;
+    if(mod_idx == RF_Rapid_Fire_Toggle_Idx) return RF_Rate_Idx;
+    if(mod_idx == AA_Aim_Assist_Toggle_Idx) return AA_Shape_Idx;
+    return 255;
+}
+
+function GetModMaxEdit(mod_idx) {
+    if(mod_idx == TJ_Turbo_Jump_Toggle_Idx) return TJ_Jump_Wait_Time_Idx;
+    if(mod_idx == AR_Anti_Recoil_Toggle_Idx) return AR_Horizontal_Idx;
+    if(mod_idx == RF_Rapid_Fire_Toggle_Idx) return RF_Burst_Idx;
+    if(mod_idx == AA_Aim_Assist_Toggle_Idx) return AA_Speed_Idx;
+    return 255;
+}
+
+function GetEditMinValue(edit_idx) {
+    if(edit_idx == TJ_Jump_Wait_Time_Idx) return 1;
+    if(edit_idx == AR_Strength_Idx) return 0;
+    if(edit_idx == AR_Horizontal_Idx) return 0;
+    if(edit_idx == RF_Rate_Idx) return 1;
+    if(edit_idx == RF_Burst_Idx) return 1;
+    if(edit_idx == AA_Shape_Idx) return 0;
+    if(edit_idx == AA_Speed_Idx) return 1;
+    return 0;
+}
+
+function GetEditMaxValue(edit_idx) {
+    if(edit_idx == TJ_Jump_Wait_Time_Idx) return 2147;
+    if(edit_idx == AR_Strength_Idx) return 100;
+    if(edit_idx == AR_Horizontal_Idx) return 100;
+    if(edit_idx == RF_Rate_Idx) return 50;
+    if(edit_idx == RF_Burst_Idx) return 10;
+    if(edit_idx == AA_Shape_Idx) return 3;
+    if(edit_idx == AA_Speed_Idx) return 100;
+    return 100;
+}
+
+// ------------ MENU HANDLER ------------
+function MenuHandler() {
+    // Reset timeout on any interaction
+    if(event_press(BTN_MENU_UP) || event_press(BTN_MENU_DOWN) || 
+       event_press(BTN_MENU_LEFT) || event_press(BTN_MENU_RIGHT) ||
+       event_press(BTN_MENU_ENTER) || event_press(BTN_MENU_BACK)) {
+        menu_timeout = system_time() + OLED_TIMEOUT;
+    }
+    
+    cls_oled(OLED_BLACK);
+    
+    if(menu_state == MENU_STATE_TITLE) {
+        HandleTitleScreen();
+    } else if(menu_state == MENU_STATE_MAIN) {
+        HandleMainMenu();
+    } else if(menu_state == MENU_STATE_MOD_LIST) {
+        HandleModList();
+    } else if(menu_state == MENU_STATE_EDIT) {
+        HandleEditMenu();
+    }
+}
+
+// ------------ TITLE SCREEN ------------
+function HandleTitleScreen() {
+    if(show_splash) {
+        // Display title/splash screen
+        puts_oled(center_x(11, OLED_FONT_MEDIUM_WIDTH), 8, OLED_FONT_MEDIUM, 11, OLED_WHITE, "Fadexz's");
+        puts_oled(center_x(13, OLED_FONT_MEDIUM_WIDTH), 20, OLED_FONT_MEDIUM, 13, OLED_WHITE, "Menu Templ.");
+        puts_oled(center_x(6, OLED_FONT_SMALL_WIDTH), 35, OLED_FONT_SMALL, 6, OLED_GRAY, "v1.0.0");
+        
+        // Auto-advance to main menu after timeout or on button press
+        if(system_time() > title_timeout || event_press(BTN_MENU_ENTER)) {
+            menu_state = MENU_STATE_MAIN;
+            show_splash = FALSE;
+        }
+    }
+}
+
+// ------------ MAIN MENU ------------
+function HandleMainMenu() {
+    // Display main menu categories
+    for(i = 0; i < _End_Category_Plus_One_Idx_; i++) {
+        puts_oled(2, 8 + (i * 10), OLED_FONT_SMALL, strlen(Main_Menu_Strings[i]), 
+                 (i == current_category) ? OLED_WHITE : OLED_GRAY, Main_Menu_Strings[i]);
+        
+        // Show ">" indicator for selected category
+        if(i == current_category) {
+            puts_oled(OLED_WIDTH - 10, 8 + (i * 10), OLED_FONT_SMALL, 1, OLED_WHITE, ">");
+        }
+    }
+    
+    // Display instruction at bottom
+    puts_oled(center_x(26, OLED_FONT_SMALL_WIDTH), OLED_HEIGHT - 8, OLED_FONT_SMALL, 26, OLED_GRAY, "[Hold LT + Press Menu/Options]");
+    
+    // Navigation
+    if(event_press(BTN_MENU_UP)) {
+        current_category = (current_category - 1 + _End_Category_Plus_One_Idx_) % _End_Category_Plus_One_Idx_;
+    }
+    if(event_press(BTN_MENU_DOWN)) {
+        current_category = (current_category + 1) % _End_Category_Plus_One_Idx_;
+    }
+    if(event_press(BTN_MENU_ENTER)) {
+        if(GetCategoryMinMod(current_category) != 255) {
+            menu_state = MENU_STATE_MOD_LIST;
+            current_mod_in_category = 0;
+        }
+    }
+    if(event_press(BTN_MENU_BACK)) {
+        menu_active = FALSE;
+        combo_run(OLED_Sleep);
+    }
+}
+
+// ------------ MOD LIST ------------
+function HandleModList() {
+    int min_mod = GetCategoryMinMod(current_category);
+    int max_mod = GetCategoryMaxMod(current_category);
+    int current_mod_idx = min_mod + current_mod_in_category;
+    
+    // Display category title
+    puts_oled(center_x(strlen(Main_Menu_Strings[current_category]), OLED_FONT_MEDIUM_WIDTH), 2, 
+             OLED_FONT_MEDIUM, strlen(Main_Menu_Strings[current_category]), OLED_WHITE, Main_Menu_Strings[current_category]);
+    
+    // Display current mod
+    puts_oled(2, 20, OLED_FONT_SMALL, strlen(Mod_Title_Strings[current_mod_idx]), OLED_WHITE, Mod_Title_Strings[current_mod_idx]);
+    
+    // Display toggle status
+    if(mod[current_mod_idx]) {
+        puts_oled(OLED_WIDTH - 25, 20, OLED_FONT_SMALL, 4, OLED_WHITE, "[ON]");
+    } else {
+        puts_oled(OLED_WIDTH - 26, 20, OLED_FONT_SMALL, 5, OLED_GRAY, "[OFF]");
+    }
+    
+    // Display instructions
+    puts_oled(center_x(25, OLED_FONT_SMALL_WIDTH), 35, OLED_FONT_SMALL, 25, OLED_GRAY, "(Press A/Cross to edit)");
+    puts_oled(center_x(32, OLED_FONT_SMALL_WIDTH), 45, OLED_FONT_SMALL, 32, OLED_GRAY, "[UP/DOWN toggle, LEFT/RIGHT switch]");
+    
+    // Navigation
+    if(event_press(BTN_MENU_UP)) {
+        mod[current_mod_idx] = !mod[current_mod_idx]; // Toggle mod on/off
+    }
+    if(event_press(BTN_MENU_DOWN)) {
+        mod[current_mod_idx] = !mod[current_mod_idx]; // Toggle mod on/off
+    }
+    if(event_press(BTN_MENU_LEFT)) {
+        if(current_mod_in_category > 0) {
+            current_mod_in_category--;
+        }
+    }
+    if(event_press(BTN_MENU_RIGHT)) {
+        if(min_mod + current_mod_in_category < max_mod) {
+            current_mod_in_category++;
+        }
+    }
+    if(event_press(BTN_MENU_ENTER)) {
+        // Enter edit mode if this mod has editable values
+        if(GetModMinEdit(current_mod_idx) != 255) {
+            menu_state = MENU_STATE_EDIT;
+            current_edit_in_mod = 0;
+        }
+    }
+    if(event_press(BTN_MENU_BACK)) {
+        menu_state = MENU_STATE_MAIN;
+    }
+}
+
+// ------------ EDIT MENU ------------
+function HandleEditMenu() {
+    int current_mod_idx = GetCategoryMinMod(current_category) + current_mod_in_category;
+    int min_edit = GetModMinEdit(current_mod_idx);
+    int max_edit = GetModMaxEdit(current_mod_idx);
+    int current_edit_idx = min_edit + current_edit_in_mod;
+    
+    // Display mod name
+    puts_oled(center_x(strlen(Mod_Title_Strings[current_mod_idx]), OLED_FONT_MEDIUM_WIDTH), 2,
+             OLED_FONT_MEDIUM, strlen(Mod_Title_Strings[current_mod_idx]), OLED_WHITE, Mod_Title_Strings[current_mod_idx]);
+    
+    // Display current edit value
+    puts_oled(2, 20, OLED_FONT_SMALL, strlen(Edit_Title_Strings[current_edit_idx]), OLED_WHITE, Edit_Title_Strings[current_edit_idx]);
+    puts_oled(80, 20, OLED_FONT_SMALL, 1, OLED_WHITE, ":");
+    
+    // Display value
+    temp_idx = find_digits(edit[current_edit_idx]);
+    number_to_string(edit[current_edit_idx], temp_idx, 90, 20);
+    
+    // Display instructions
+    puts_oled(center_x(20, OLED_FONT_SMALL_WIDTH), 35, OLED_FONT_SMALL, 20, OLED_GRAY, "(UP/DOWN to change)");
+    puts_oled(center_x(28, OLED_FONT_SMALL_WIDTH), 45, OLED_FONT_SMALL, 28, OLED_GRAY, "[LEFT/RIGHT for more values]");
+    
+    // Navigation
+    if(event_press(BTN_MENU_UP)) {
+        if(edit[current_edit_idx] < GetEditMaxValue(current_edit_idx)) {
+            edit[current_edit_idx]++;
+        }
+    }
+    if(event_press(BTN_MENU_DOWN)) {
+        if(edit[current_edit_idx] > GetEditMinValue(current_edit_idx)) {
+            edit[current_edit_idx]--;
+        }
+    }
+    if(event_press(BTN_MENU_LEFT)) {
+        if(current_edit_in_mod > 0) {
+            current_edit_in_mod--;
+        }
+    }
+    if(event_press(BTN_MENU_RIGHT)) {
+        if(min_edit + current_edit_in_mod < max_edit) {
+            current_edit_in_mod++;
+        }
+    }
+    if(event_press(BTN_MENU_BACK)) {
+        menu_state = MENU_STATE_MOD_LIST;
+    }
+}
+
+// ----------- OLED WAKE/SLEEP -----------
+combo OLED_Wake {
+    // Add any OLED wakeup logic here (if needed)
+}
+
+combo OLED_Sleep {
+    cls_oled(OLED_BLACK);
+}
+
+// ----------- UTILITY FUNCTIONS -----------
+function center_x(chars, fontw) {
+    return (OLED_WIDTH / 2) - ((chars * fontw) / 2);
+}
+
+function find_digits(num) {
+    num = abs(num);
+    if(num / 10000 > 0) return 5;
+    if(num / 1000 > 0)  return 4;
+    if(num / 100 > 0)   return 3;
+    if(num / 10 > 0)    return 2;
+    return 1;
+}
+
+function number_to_string(value, f_digits, x_pos, y_pos) {
+    int i = 0, c, c_val = 10000;
+    
+    if(value < 0) { 
+        putc_oled(x_pos + i * OLED_FONT_SMALL_WIDTH, y_pos, OLED_FONT_SMALL, OLED_WHITE, 45); 
+        i += 1; 
+        value = abs(value); 
+    }
+    
+    for(c = 5; c >= 1; c--) {
+        if(f_digits >= c) {
+            putc_oled(x_pos + i * OLED_FONT_SMALL_WIDTH, y_pos, OLED_FONT_SMALL, OLED_WHITE, 48 + value / c_val);
+            value = value % c_val;
+            i += 1;
+        }
+        c_val /= 10;
+    }
+}
+
+// ============ END MENU TEMPLATE =============
+
+/* 
+TO ADD NEW MODS/VALUES:
+
+1. Add enum indexes for your mod and values
+2. Add strings to Mod_Title_Strings[] and Edit_Title_Strings[]
+3. Add initialization in init{} for your edit values
+4. Add cases to the helper functions (GetCategoryMinMod, GetModMinEdit, etc.)
+5. Use mod[YourMod_Idx] and edit[YourValue_Idx] in your main logic
+
+Example: Adding "Auto Ping" with "Interval" setting:
+- Add Auto_Ping_Idx to mod enums
+- Add Auto_Ping_Interval_Idx to edit enums  
+- Add "Auto Ping" to Mod_Title_Strings[]
+- Add "Interval" to Edit_Title_Strings[]
+- Add edit[Auto_Ping_Interval_Idx] = 2000; to init{}
+- Add cases to helper functions for ranges and categorization
+*/
