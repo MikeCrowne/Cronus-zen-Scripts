@@ -1,0 +1,448 @@
+/*
+ * Cronus Zen OLED Navigation Menu System
+ * 
+ * Controls:
+ * - D-Pad Up/Down: Navigate menu items
+ * - D-Pad Left/Right: Adjust values or navigate sub-menus
+ * - A/Cross: Select/Enter
+ * - B/Circle: Back/Exit
+ * - Menu Button: Toggle menu on/off
+ * - View Button: Quick settings
+ */
+
+// Menu system constants
+#define MENU_OFF            0
+#define MENU_MAIN           1
+#define MENU_AIM_ASSIST     2
+#define MENU_SETTINGS       3
+#define MENU_CONTROLLER     4
+#define MENU_DISPLAY        5
+#define MENU_ABOUT          6
+
+#define MAX_MENU_ITEMS      6
+#define DISPLAY_WIDTH       128
+#define DISPLAY_HEIGHT      64
+
+// Current menu state
+int current_menu = MENU_OFF;
+int menu_selection = 0;
+int menu_scroll_offset = 0;
+int menu_visible = FALSE;
+int menu_toggle_time = 0;
+int selection_change_time = 0;
+
+// Menu settings
+int aim_assist_enabled = TRUE;
+int aim_assist_intensity = 30;
+int aim_assist_shape = 0;
+int controller_sensitivity = 100;
+int display_brightness = 80;
+int display_contrast = 70;
+int auto_hide_menu = TRUE;
+int menu_timeout = 5000; // 5 seconds
+
+// Display refresh variables
+int display_refresh_time = 0;
+int display_needs_update = TRUE;
+int cursor_blink_time = 0;
+int cursor_visible = TRUE;
+
+// Menu item strings
+char menu_main_items[6][20] = {
+    "Aim Assist",
+    "Settings", 
+    "Controller",
+    "Display",
+    "About",
+    "Exit"
+};
+
+char menu_aim_items[4][20] = {
+    "Enable/Disable",
+    "Intensity",
+    "Shape",
+    "Back"
+};
+
+char menu_settings_items[5][20] = {
+    "Sensitivity",
+    "Auto Hide Menu",
+    "Menu Timeout",
+    "Reset Settings",
+    "Back"
+};
+
+char menu_controller_items[4][20] = {
+    "Deadzone",
+    "Response Curve",
+    "Calibrate",
+    "Back"
+};
+
+char menu_display_items[4][20] = {
+    "Brightness",
+    "Contrast",
+    "Screen Saver",
+    "Back"
+};
+
+char shape_names[5][12] = {
+    "Circle",
+    "Triangle", 
+    "Spiral",
+    "Helix",
+    "Scared"
+};
+
+main {
+    // Menu toggle with Menu button
+    if(event_press(XB1_MENU) && get_ptime(XB1_MENU) > 200) {
+        menu_visible = !menu_visible;
+        if(menu_visible) {
+            current_menu = MENU_MAIN;
+            menu_selection = 0;
+            menu_scroll_offset = 0;
+        } else {
+            current_menu = MENU_OFF;
+        }
+        menu_toggle_time = 0;
+        display_needs_update = TRUE;
+    }
+    
+    // Quick settings with View button
+    if(event_press(XB1_VIEW) && get_ptime(XB1_VIEW) > 200) {
+        if(menu_visible && current_menu == MENU_SETTINGS) {
+            menu_visible = FALSE;
+            current_menu = MENU_OFF;
+        } else {
+            menu_visible = TRUE;
+            current_menu = MENU_SETTINGS;
+            menu_selection = 0;
+        }
+        display_needs_update = TRUE;
+    }
+    
+    // Auto-hide menu after timeout
+    if(menu_visible && auto_hide_menu && menu_toggle_time > menu_timeout) {
+        menu_visible = FALSE;
+        current_menu = MENU_OFF;
+        display_needs_update = TRUE;
+    }
+    
+    // Handle menu navigation when visible
+    if(menu_visible) {
+        handle_menu_navigation();
+    }
+    
+    // Update display if needed
+    if(display_needs_update || display_refresh_time > 100) {
+        update_display();
+        display_refresh_time = 0;
+        display_needs_update = FALSE;
+    }
+    
+    // Update timers
+    menu_toggle_time += get_rtime();
+    display_refresh_time += get_rtime();
+    selection_change_time += get_rtime();
+    cursor_blink_time += get_rtime();
+    
+    // Cursor blink for better visibility
+    if(cursor_blink_time > 500) {
+        cursor_visible = !cursor_visible;
+        cursor_blink_time = 0;
+        if(menu_visible) display_needs_update = TRUE;
+    }
+}
+
+// Handle menu navigation input
+void handle_menu_navigation() {
+    int max_items = get_max_menu_items();
+    
+    // Navigate up
+    if(event_press(XB1_UP) && selection_change_time > 150) {
+        menu_selection = (menu_selection - 1 + max_items) % max_items;
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+        
+        // Scroll if needed
+        if(menu_selection < menu_scroll_offset) {
+            menu_scroll_offset = menu_selection;
+        }
+    }
+    
+    // Navigate down  
+    if(event_press(XB1_DOWN) && selection_change_time > 150) {
+        menu_selection = (menu_selection + 1) % max_items;
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+        
+        // Scroll if needed
+        if(menu_selection >= menu_scroll_offset + 4) {
+            menu_scroll_offset = menu_selection - 3;
+        }
+    }
+    
+    // Handle left/right for value adjustment
+    if(event_press(XB1_LEFT) && selection_change_time > 150) {
+        handle_value_change(-1);
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+    }
+    
+    if(event_press(XB1_RIGHT) && selection_change_time > 150) {
+        handle_value_change(1);
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+    }
+    
+    // Handle selection with A button
+    if(event_press(XB1_A) && selection_change_time > 200) {
+        handle_menu_selection();
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+    }
+    
+    // Handle back with B button
+    if(event_press(XB1_B) && selection_change_time > 200) {
+        handle_menu_back();
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+    }
+}
+
+// Handle value changes for settings
+void handle_value_change(int direction) {
+    if(current_menu == MENU_AIM_ASSIST) {
+        if(menu_selection == 0) {
+            aim_assist_enabled = !aim_assist_enabled;
+        } else if(menu_selection == 1) {
+            aim_assist_intensity = clamp(aim_assist_intensity + (direction * 5), 10, 100);
+        } else if(menu_selection == 2) {
+            aim_assist_shape = (aim_assist_shape + direction + 5) % 5;
+        }
+    } else if(current_menu == MENU_SETTINGS) {
+        if(menu_selection == 0) {
+            controller_sensitivity = clamp(controller_sensitivity + (direction * 10), 50, 150);
+        } else if(menu_selection == 1) {
+            auto_hide_menu = !auto_hide_menu;
+        } else if(menu_selection == 2) {
+            menu_timeout = clamp(menu_timeout + (direction * 1000), 2000, 10000);
+        }
+    } else if(current_menu == MENU_DISPLAY) {
+        if(menu_selection == 0) {
+            display_brightness = clamp(display_brightness + (direction * 5), 20, 100);
+        } else if(menu_selection == 1) {
+            display_contrast = clamp(display_contrast + (direction * 5), 30, 100);
+        }
+    }
+}
+
+// Handle menu selection
+void handle_menu_selection() {
+    if(current_menu == MENU_MAIN) {
+        if(menu_selection == 0) {
+            current_menu = MENU_AIM_ASSIST;
+            menu_selection = 0;
+        } else if(menu_selection == 1) {
+            current_menu = MENU_SETTINGS;
+            menu_selection = 0;
+        } else if(menu_selection == 2) {
+            current_menu = MENU_CONTROLLER;
+            menu_selection = 0;
+        } else if(menu_selection == 3) {
+            current_menu = MENU_DISPLAY;
+            menu_selection = 0;
+        } else if(menu_selection == 4) {
+            current_menu = MENU_ABOUT;
+            menu_selection = 0;
+        } else if(menu_selection == 5) {
+            menu_visible = FALSE;
+            current_menu = MENU_OFF;
+        }
+    } else if(current_menu == MENU_AIM_ASSIST) {
+        if(menu_selection == 0) {
+            aim_assist_enabled = !aim_assist_enabled;
+        } else if(menu_selection == 3) {
+            current_menu = MENU_MAIN;
+            menu_selection = 0;
+        }
+    } else if(current_menu == MENU_SETTINGS) {
+        if(menu_selection == 3) {
+            // Reset settings
+            aim_assist_intensity = 30;
+            controller_sensitivity = 100;
+            display_brightness = 80;
+            display_contrast = 70;
+            auto_hide_menu = TRUE;
+            menu_timeout = 5000;
+        } else if(menu_selection == 4) {
+            current_menu = MENU_MAIN;
+            menu_selection = 1;
+        }
+    }
+    
+    // Handle back buttons for other menus
+    if(menu_selection == get_max_menu_items() - 1) {
+        if(current_menu != MENU_MAIN && current_menu != MENU_ABOUT) {
+            current_menu = MENU_MAIN;
+            menu_selection = 0;
+        }
+    }
+}
+
+// Handle back navigation
+void handle_menu_back() {
+    if(current_menu == MENU_MAIN) {
+        menu_visible = FALSE;
+        current_menu = MENU_OFF;
+    } else {
+        current_menu = MENU_MAIN;
+        menu_selection = 0;
+    }
+}
+
+// Get maximum menu items for current menu
+int get_max_menu_items() {
+    if(current_menu == MENU_MAIN) return 6;
+    else if(current_menu == MENU_AIM_ASSIST) return 4;
+    else if(current_menu == MENU_SETTINGS) return 5;
+    else if(current_menu == MENU_CONTROLLER) return 4;
+    else if(current_menu == MENU_DISPLAY) return 4;
+    else if(current_menu == MENU_ABOUT) return 1;
+    return 1;
+}
+
+// Update OLED display
+void update_display() {
+    if(!menu_visible) {
+        cls_oled(0); // Clear screen
+        return;
+    }
+    
+    cls_oled(0); // Clear screen with black
+    
+    // Draw title bar
+    rect_oled(0, 0, DISPLAY_WIDTH, 12, 1);
+    
+    // Draw menu title
+    if(current_menu == MENU_MAIN) {
+        printf(2, 2, 0, "MAIN MENU");
+    } else if(current_menu == MENU_AIM_ASSIST) {
+        printf(2, 2, 0, "AIM ASSIST");
+    } else if(current_menu == MENU_SETTINGS) {
+        printf(2, 2, 0, "SETTINGS");
+    } else if(current_menu == MENU_CONTROLLER) {
+        printf(2, 2, 0, "CONTROLLER");
+    } else if(current_menu == MENU_DISPLAY) {
+        printf(2, 2, 0, "DISPLAY");
+    } else if(current_menu == MENU_ABOUT) {
+        printf(2, 2, 0, "ABOUT");
+    }
+    
+    // Draw menu items
+    draw_menu_items();
+    
+    // Draw status bar
+    draw_status_bar();
+}
+
+// Draw menu items
+void draw_menu_items() {
+    int y_pos = 16;
+    int max_items = get_max_menu_items();
+    int visible_items = min(4, max_items);
+    
+    for(int i = 0; i < visible_items; i++) {
+        int item_index = menu_scroll_offset + i;
+        if(item_index >= max_items) break;
+        
+        // Draw selection cursor
+        if(item_index == menu_selection && cursor_visible) {
+            printf(2, y_pos, 1, ">");
+        } else {
+            printf(2, y_pos, 1, " ");
+        }
+        
+        // Draw menu item text
+        if(current_menu == MENU_MAIN) {
+            printf(12, y_pos, 1, menu_main_items[item_index]);
+        } else if(current_menu == MENU_AIM_ASSIST) {
+            printf(12, y_pos, 1, menu_aim_items[item_index]);
+            draw_aim_assist_values(item_index, y_pos);
+        } else if(current_menu == MENU_SETTINGS) {
+            printf(12, y_pos, 1, menu_settings_items[item_index]);
+            draw_settings_values(item_index, y_pos);
+        } else if(current_menu == MENU_CONTROLLER) {
+            printf(12, y_pos, 1, menu_controller_items[item_index]);
+        } else if(current_menu == MENU_DISPLAY) {
+            printf(12, y_pos, 1, menu_display_items[item_index]);
+            draw_display_values(item_index, y_pos);
+        } else if(current_menu == MENU_ABOUT) {
+            printf(12, y_pos, 1, "Cronus Zen Menu v1.0");
+        }
+        
+        y_pos += 12;
+    }
+}
+
+// Draw aim assist setting values
+void draw_aim_assist_values(int item_index, int y_pos) {
+    if(item_index == 0) {
+        printf(90, y_pos, 1, aim_assist_enabled ? "ON" : "OFF");
+    } else if(item_index == 1) {
+        printf(90, y_pos, 1, "%d", aim_assist_intensity);
+    } else if(item_index == 2) {
+        printf(85, y_pos, 1, shape_names[aim_assist_shape]);
+    }
+}
+
+// Draw settings values
+void draw_settings_values(int item_index, int y_pos) {
+    if(item_index == 0) {
+        printf(90, y_pos, 1, "%d%%", controller_sensitivity);
+    } else if(item_index == 1) {
+        printf(90, y_pos, 1, auto_hide_menu ? "ON" : "OFF");
+    } else if(item_index == 2) {
+        printf(90, y_pos, 1, "%ds", menu_timeout / 1000);
+    }
+}
+
+// Draw display setting values
+void draw_display_values(int item_index, int y_pos) {
+    if(item_index == 0) {
+        printf(90, y_pos, 1, "%d%%", display_brightness);
+    } else if(item_index == 1) {
+        printf(90, y_pos, 1, "%d%%", display_contrast);
+    }
+}
+
+// Draw status bar
+void draw_status_bar() {
+    line_oled(0, 56, DISPLAY_WIDTH, 56, 1);
+    
+    // Show current time or other status info
+    printf(2, 58, 1, "A:Select B:Back");
+    
+    // Show scroll indicator if needed
+    int max_items = get_max_menu_items();
+    if(max_items > 4) {
+        if(menu_scroll_offset > 0) {
+            printf(100, 58, 1, "↑");
+        }
+        if(menu_scroll_offset + 4 < max_items) {
+            printf(108, 58, 1, "↓");
+        }
+    }
+}
+
+// Utility functions
+int min(int a, int b) {
+    return (a < b) ? a : b;
+}
+
+int clamp(int value, int min_val, int max_val) {
+    if(value < min_val) return min_val;
+    if(value > max_val) return max_val;
+    return value;
+}

@@ -1,0 +1,255 @@
+/*
+ * GPC Aim Assist with Shapes - Official Syntax
+ * Following Official Cronus Documentation Structure
+ * 
+ * Features: Circle, Triangle, Spiral, Helix, Scared shapes
+ * Controls: LT/RT activate, D-Pad changes shapes/intensity
+ */
+
+// ===== DEFINITIONS SECTION =====
+define SHAPE_CIRCLE    = 0;
+define SHAPE_TRIANGLE  = 1;
+define SHAPE_SPIRAL    = 2;
+define SHAPE_HELIX     = 3;
+define SHAPE_SCARED    = 4;
+define MAX_SHAPES      = 5;
+
+// ===== DATA SECTION =====
+data(
+    "Circle", 0,
+    "Triangle", 0, 
+    "Spiral", 0,
+    "Helix", 0,
+    "Scared", 0,
+    "Aim Assist: ", 0,
+    "Shape: ", 0,
+    "Intensity: ", 0,
+    "ACTIVE", 0,
+    "OFF", 0
+);
+
+// ===== VARIABLES SECTION =====
+int aim_assist_enabled = TRUE;
+int aim_assist_active = FALSE;
+int current_shape = SHAPE_CIRCLE;
+int intensity = 30;
+int speed = 2;
+
+// Pattern variables
+int angle = 0;
+int triangle_side = 0;
+int triangle_progress = 0;
+int spiral_expansion = 0;
+int scared_offset_x = 0;
+int scared_offset_y = 0;
+
+// Control variables
+int shape_change_time = 0;
+int intensity_change_time = 0;
+int display_update_time = 0;
+
+// Math lookup table
+int sine_table[91] = {
+    0, 2, 3, 5, 7, 9, 10, 12, 14, 16, 17, 19, 21, 22, 24, 26, 28, 29, 31, 33,
+    34, 36, 37, 39, 41, 42, 44, 45, 47, 48, 50, 52, 53, 54, 56, 57, 59, 60, 62, 63,
+    64, 66, 67, 68, 69, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85,
+    86, 87, 87, 88, 89, 90, 90, 91, 91, 92, 92, 93, 93, 94, 94, 94, 95, 95, 95, 96,
+    96, 96, 96, 97, 97, 97, 97, 97, 98, 98, 98
+};
+
+// Random seed
+int random_seed = 1;
+
+// ===== INIT SECTION =====
+init {
+    // Initialize display
+    cls_oled(0);
+    
+    // Set random seed based on controller
+    if(get_controller() == PIO_PS4) {
+        random_seed = 12345;
+    } else if(get_controller() == PIO_XB1) {
+        random_seed = 54321;
+    } else {
+        random_seed = 999;
+    }
+    
+    // Reset pattern variables
+    angle = 0;
+    triangle_side = 0;
+    triangle_progress = 0;
+    spiral_expansion = 0;
+}
+
+// ===== MAIN SECTION =====
+main {
+    // Shape selection with D-Pad
+    if(event_press(XB1_UP) && shape_change_time > 200) {
+        current_shape = (current_shape + 1) % MAX_SHAPES;
+        reset_pattern_variables();
+        shape_change_time = 0;
+    }
+    
+    if(event_press(XB1_DOWN) && shape_change_time > 200) {
+        current_shape = (current_shape - 1 + MAX_SHAPES) % MAX_SHAPES;
+        reset_pattern_variables();
+        shape_change_time = 0;
+    }
+    
+    // Intensity adjustment
+    if(event_press(XB1_LEFT) && intensity_change_time > 200) {
+        intensity = intensity - 5;
+        if(intensity < 10) intensity = 10;
+        intensity_change_time = 0;
+    }
+    
+    if(event_press(XB1_RIGHT) && intensity_change_time > 200) {
+        intensity = intensity + 5;
+        if(intensity > 100) intensity = 100;
+        intensity_change_time = 0;
+    }
+    
+    // Enable/disable with A button
+    if(event_press(XB1_A) && get_ptime(XB1_A) > 300) {
+        aim_assist_enabled = !aim_assist_enabled;
+    }
+    
+    // Check if aim assist should be active
+    aim_assist_active = aim_assist_enabled && (get_val(XB1_LT) > 50 || get_val(XB1_RT) > 50);
+    
+    // Apply aim assist if active
+    if(aim_assist_active) {
+        combo_run(apply_aim_assist);
+    }
+    
+    // Update display
+    if(display_update_time > 100) {
+        update_display();
+        display_update_time = 0;
+    }
+    
+    // Update timers
+    shape_change_time = shape_change_time + get_rtime();
+    intensity_change_time = intensity_change_time + get_rtime();
+    display_update_time = display_update_time + get_rtime();
+}
+
+// ===== COMBO SECTION =====
+combo apply_aim_assist {
+    int stick_x = 0;
+    int stick_y = 0;
+    
+    // Generate movement based on current shape
+    if(current_shape == SHAPE_CIRCLE) {
+        stick_x = (intensity * get_cos(angle)) / 100;
+        stick_y = (intensity * get_sin(angle)) / 100;
+        angle = (angle + speed) % 360;
+    }
+    else if(current_shape == SHAPE_TRIANGLE) {
+        if(triangle_side == 0) {
+            // Side 1: Top to bottom-right
+            stick_x = (triangle_progress * intensity) / 200;
+            stick_y = inv((triangle_progress * intensity) / 200);
+        }
+        else if(triangle_side == 1) {
+            // Side 2: Bottom-right to bottom-left
+            stick_x = (intensity / 2) - (triangle_progress * intensity) / 100;
+            stick_y = inv(intensity / 2);
+        }
+        else {
+            // Side 3: Bottom-left to top
+            stick_x = inv(intensity / 2) + (triangle_progress * intensity) / 200;
+            stick_y = inv(intensity / 2) + (triangle_progress * intensity) / 200;
+        }
+        
+        triangle_progress = triangle_progress + (speed * 2);
+        if(triangle_progress >= 100) {
+            triangle_progress = 0;
+            triangle_side = (triangle_side + 1) % 3;
+        }
+    }
+    else if(current_shape == SHAPE_SPIRAL) {
+        int spiral_radius = (intensity * spiral_expansion) / 100;
+        stick_x = (spiral_radius * get_cos(angle)) / 100;
+        stick_y = (spiral_radius * get_sin(angle)) / 100;
+        angle = (angle + speed) % 360;
+        spiral_expansion = spiral_expansion + 1;
+        if(spiral_expansion > 100) {
+            spiral_expansion = 0;
+        }
+    }
+    else if(current_shape == SHAPE_HELIX) {
+        int helix_radius = intensity / 2;
+        stick_x = (helix_radius * get_cos(angle)) / 100;
+        stick_y = (intensity * get_sin(angle * 2)) / 200;
+        angle = (angle + speed) % 360;
+    }
+    else if(current_shape == SHAPE_SCARED) {
+        scared_offset_x = (custom_random(intensity * 2) - intensity) / 2;
+        scared_offset_y = (custom_random(intensity * 2) - intensity) / 2;
+        
+        stick_x = ((intensity / 3) * get_cos(angle)) / 100 + scared_offset_x;
+        stick_y = ((intensity / 3) * get_sin(angle)) / 100 + scared_offset_y;
+        angle = (angle + speed + custom_random(6) - 3) % 360;
+    }
+    
+    // Apply movement to right stick
+    set_val(XB1_RX, get_val(XB1_RX) + stick_x);
+    set_val(XB1_RY, get_val(XB1_RY) + stick_y);
+    
+    wait(20);
+}
+
+// ===== FUNCTIONS SECTION =====
+function reset_pattern_variables() {
+    angle = 0;
+    triangle_side = 0;
+    triangle_progress = 0;
+    spiral_expansion = 0;
+    return 0;
+}
+
+function get_sin(degrees) {
+    degrees = degrees % 360;
+    if(degrees < 0) degrees = degrees + 360;
+    
+    if(degrees <= 90) return sine_table[degrees];
+    else if(degrees <= 180) return sine_table[180 - degrees];
+    else if(degrees <= 270) return inv(sine_table[degrees - 180]);
+    else return inv(sine_table[360 - degrees]);
+}
+
+function get_cos(degrees) {
+    return get_sin(degrees + 90);
+}
+
+function custom_random(max_val) {
+    random_seed = (random_seed * 1103515245 + 12345) & 0x7fffffff;
+    return (random_seed % max_val);
+}
+
+function update_display() {
+    // Clear screen
+    cls_oled(0);
+    
+    // Draw header
+    rect_oled(0, 0, 128, 12, TRUE, TRUE);
+    printf(2, 2, 0, FALSE, 32); // "Aim Assist: "
+    
+    // Draw current shape
+    printf(2, 16, 0, TRUE, 40); // "Shape: "
+    printf(50, 16, 0, TRUE, current_shape * 8); // Shape name
+    
+    // Draw status
+    if(aim_assist_active) {
+        printf(90, 2, 0, FALSE, 56); // "ACTIVE"
+        circle_oled(120, 8, 3, TRUE, TRUE);
+    } else if(!aim_assist_enabled) {
+        printf(90, 2, 0, FALSE, 64); // "OFF"
+    }
+    
+    // Draw controls help
+    printf(2, 52, 0, TRUE, 48); // "Intensity: "
+    
+    return 0;
+}
