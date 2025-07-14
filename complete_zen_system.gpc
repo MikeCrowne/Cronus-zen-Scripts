@@ -1,0 +1,579 @@
+/*
+ * Complete Cronus Zen System
+ * Integrated Aim Assist with Shapes + OLED Menu Navigation
+ * 
+ * Features:
+ * - Aim Assist with 5 different shapes (Circle, Triangle, Spiral, Helix, Scared)
+ * - Complete OLED menu navigation system
+ * - Real-time settings adjustment
+ * - Visual feedback and status display
+ * 
+ * Controls:
+ * - LT/RT: Activate aim assist
+ * - Menu Button: Toggle OLED menu
+ * - View Button: Quick settings
+ * - D-Pad: Navigate menus and adjust settings
+ * - A/Cross: Select/Confirm
+ * - B/Circle: Back/Cancel
+ */
+
+#include <cronus.gph>
+
+// Menu system constants
+#define MENU_OFF            0
+#define MENU_MAIN           1
+#define MENU_AIM_ASSIST     2
+#define MENU_SETTINGS       3
+#define MENU_CONTROLLER     4
+#define MENU_DISPLAY        5
+#define MENU_ABOUT          6
+
+// Shape definitions
+#define SHAPE_CIRCLE        0
+#define SHAPE_TRIANGLE      1
+#define SHAPE_SPIRAL        2
+#define SHAPE_HELIX         3
+#define SHAPE_SCARED        4
+
+// Display constants
+#define DISPLAY_WIDTH       128
+#define DISPLAY_HEIGHT      64
+
+// Menu state variables
+int current_menu = MENU_OFF;
+int menu_selection = 0;
+int menu_scroll_offset = 0;
+int menu_visible = FALSE;
+int menu_toggle_time = 0;
+int selection_change_time = 0;
+
+// Aim assist variables
+int aim_assist_enabled = TRUE;
+int aim_assist_active = FALSE;
+int current_shape = SHAPE_CIRCLE;
+int intensity = 30;
+int speed = 2;
+int pattern_step = 0;
+int pattern_time = 0;
+int shape_radius = 25;
+int spiral_expansion = 0;
+int scared_offset_x = 0;
+int scared_offset_y = 0;
+
+// Math helper variables
+int angle = 0;
+int triangle_side = 0;
+int triangle_progress = 0;
+
+// Settings variables
+int controller_sensitivity = 100;
+int display_brightness = 80;
+int display_contrast = 70;
+int auto_hide_menu = TRUE;
+int menu_timeout = 5000;
+
+// Display variables
+int display_refresh_time = 0;
+int display_needs_update = TRUE;
+int cursor_blink_time = 0;
+int cursor_visible = TRUE;
+int status_display_time = 0;
+
+// Menu strings
+char menu_main_items[6][16] = {
+    "Aim Assist",
+    "Settings", 
+    "Controller",
+    "Display",
+    "About",
+    "Exit"
+};
+
+char menu_aim_items[5][16] = {
+    "Enable/Disable",
+    "Shape",
+    "Intensity",
+    "Speed",
+    "Back"
+};
+
+char menu_settings_items[5][16] = {
+    "Sensitivity",
+    "Auto Hide Menu",
+    "Menu Timeout",
+    "Reset Settings",
+    "Back"
+};
+
+char shape_names[5][12] = {
+    "Circle",
+    "Triangle", 
+    "Spiral",
+    "Helix",
+    "Scared"
+};
+
+// Random seed for scared pattern
+int random_seed = 1;
+
+main {
+    // Menu toggle with Menu button
+    if(event_press(XB1_MENU) && get_ptime(XB1_MENU) > 200) {
+        menu_visible = !menu_visible;
+        if(menu_visible) {
+            current_menu = MENU_MAIN;
+            menu_selection = 0;
+            menu_scroll_offset = 0;
+        } else {
+            current_menu = MENU_OFF;
+        }
+        menu_toggle_time = 0;
+        display_needs_update = TRUE;
+    }
+    
+    // Quick settings with View button
+    if(event_press(XB1_VIEW) && get_ptime(XB1_VIEW) > 200) {
+        if(menu_visible && current_menu == MENU_SETTINGS) {
+            menu_visible = FALSE;
+            current_menu = MENU_OFF;
+        } else {
+            menu_visible = TRUE;
+            current_menu = MENU_SETTINGS;
+            menu_selection = 0;
+        }
+        display_needs_update = TRUE;
+    }
+    
+    // Auto-hide menu after timeout
+    if(menu_visible && auto_hide_menu && menu_toggle_time > menu_timeout) {
+        menu_visible = FALSE;
+        current_menu = MENU_OFF;
+        display_needs_update = TRUE;
+    }
+    
+    // Handle menu navigation when visible
+    if(menu_visible) {
+        handle_menu_navigation();
+    } else {
+        // Handle aim assist when menu is not visible
+        handle_aim_assist();
+    }
+    
+    // Update display
+    if(display_needs_update || display_refresh_time > 100) {
+        update_display();
+        display_refresh_time = 0;
+        display_needs_update = FALSE;
+    }
+    
+    // Update timers
+    menu_toggle_time += get_rtime();
+    display_refresh_time += get_rtime();
+    selection_change_time += get_rtime();
+    cursor_blink_time += get_rtime();
+    status_display_time += get_rtime();
+    
+    // Cursor blink for better visibility
+    if(cursor_blink_time > 500) {
+        cursor_visible = !cursor_visible;
+        cursor_blink_time = 0;
+        if(menu_visible) display_needs_update = TRUE;
+    }
+}
+
+// Handle aim assist logic
+void handle_aim_assist() {
+    // Check if aim assist should be active
+    aim_assist_active = aim_assist_enabled && (get_val(XB1_LT) > 50 || get_val(XB1_RT) > 50);
+    
+    // Quick shape cycling with D-Pad when not in menu
+    if(event_press(XB1_UP) && get_ptime(XB1_UP) > 200) {
+        current_shape = (current_shape + 1) % 5;
+        reset_pattern_state();
+        show_status_message();
+    }
+    
+    if(event_press(XB1_DOWN) && get_ptime(XB1_DOWN) > 200) {
+        current_shape = (current_shape - 1 + 5) % 5;
+        reset_pattern_state();
+        show_status_message();
+    }
+    
+    // Quick intensity adjustment
+    if(event_press(XB1_LEFT) && get_ptime(XB1_LEFT) > 200) {
+        intensity = clamp(intensity - 5, 10, 100);
+        show_status_message();
+    }
+    
+    if(event_press(XB1_RIGHT) && get_ptime(XB1_RIGHT) > 200) {
+        intensity = clamp(intensity + 5, 10, 100);
+        show_status_message();
+    }
+    
+    // Apply aim assist if active
+    if(aim_assist_active) {
+        apply_aim_assist();
+    }
+}
+
+// Apply aim assist patterns
+void apply_aim_assist() {
+    int stick_x = 0;
+    int stick_y = 0;
+    
+    // Generate movement based on current shape
+    if(current_shape == SHAPE_CIRCLE) {
+        stick_x = (intensity * custom_cos(angle)) / 100;
+        stick_y = (intensity * custom_sin(angle)) / 100;
+        angle = (angle + speed) % 360;
+    }
+    else if(current_shape == SHAPE_TRIANGLE) {
+        if(triangle_side == 0) {
+            stick_x = (triangle_progress * intensity) / 200;
+            stick_y = -(triangle_progress * intensity) / 200;
+        }
+        else if(triangle_side == 1) {
+            stick_x = (intensity / 2) - (triangle_progress * intensity) / 100;
+            stick_y = -(intensity / 2);
+        }
+        else {
+            stick_x = -(intensity / 2) + (triangle_progress * intensity) / 200;
+            stick_y = -(intensity / 2) + (triangle_progress * intensity) / 200;
+        }
+        
+        triangle_progress += speed * 2;
+        if(triangle_progress >= 100) {
+            triangle_progress = 0;
+            triangle_side = (triangle_side + 1) % 3;
+        }
+    }
+    else if(current_shape == SHAPE_SPIRAL) {
+        int spiral_radius = (intensity * spiral_expansion) / 100;
+        stick_x = (spiral_radius * custom_cos(angle)) / 100;
+        stick_y = (spiral_radius * custom_sin(angle)) / 100;
+        angle = (angle + speed) % 360;
+        spiral_expansion += 1;
+        if(spiral_expansion > 100) {
+            spiral_expansion = 0;
+        }
+    }
+    else if(current_shape == SHAPE_HELIX) {
+        int helix_radius = intensity / 2;
+        stick_x = (helix_radius * custom_cos(angle)) / 100;
+        stick_y = (intensity * custom_sin(angle * 2)) / 200;
+        angle = (angle + speed) % 360;
+    }
+    else if(current_shape == SHAPE_SCARED) {
+        scared_offset_x = (custom_random(intensity * 2) - intensity) / 2;
+        scared_offset_y = (custom_random(intensity * 2) - intensity) / 2;
+        
+        stick_x = ((intensity / 3) * custom_cos(angle)) / 100 + scared_offset_x;
+        stick_y = ((intensity / 3) * custom_sin(angle)) / 100 + scared_offset_y;
+        angle = (angle + speed + custom_random(6) - 3) % 360;
+    }
+    
+    // Apply calculated movement to right stick
+    set_val(XB1_RX, clamp(get_val(XB1_RX) + stick_x, -100, 100));
+    set_val(XB1_RY, clamp(get_val(XB1_RY) + stick_y, -100, 100));
+}
+
+// Reset pattern state when changing shapes
+void reset_pattern_state() {
+    pattern_step = 0;
+    angle = 0;
+    triangle_side = 0;
+    triangle_progress = 0;
+    spiral_expansion = 0;
+}
+
+// Show status message
+void show_status_message() {
+    status_display_time = 0;
+    display_needs_update = TRUE;
+}
+
+// Handle menu navigation
+void handle_menu_navigation() {
+    int max_items = get_max_menu_items();
+    
+    // Navigate up
+    if(event_press(XB1_UP) && selection_change_time > 150) {
+        menu_selection = (menu_selection - 1 + max_items) % max_items;
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+        
+        if(menu_selection < menu_scroll_offset) {
+            menu_scroll_offset = menu_selection;
+        }
+    }
+    
+    // Navigate down
+    if(event_press(XB1_DOWN) && selection_change_time > 150) {
+        menu_selection = (menu_selection + 1) % max_items;
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+        
+        if(menu_selection >= menu_scroll_offset + 4) {
+            menu_scroll_offset = menu_selection - 3;
+        }
+    }
+    
+    // Handle left/right for value adjustment
+    if(event_press(XB1_LEFT) && selection_change_time > 150) {
+        handle_value_change(-1);
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+    }
+    
+    if(event_press(XB1_RIGHT) && selection_change_time > 150) {
+        handle_value_change(1);
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+    }
+    
+    // Handle selection
+    if(event_press(XB1_A) && selection_change_time > 200) {
+        handle_menu_selection();
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+    }
+    
+    // Handle back
+    if(event_press(XB1_B) && selection_change_time > 200) {
+        handle_menu_back();
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+    }
+}
+
+// Handle value changes
+void handle_value_change(int direction) {
+    if(current_menu == MENU_AIM_ASSIST) {
+        if(menu_selection == 0) {
+            aim_assist_enabled = !aim_assist_enabled;
+        } else if(menu_selection == 1) {
+            current_shape = (current_shape + direction + 5) % 5;
+            reset_pattern_state();
+        } else if(menu_selection == 2) {
+            intensity = clamp(intensity + (direction * 5), 10, 100);
+        } else if(menu_selection == 3) {
+            speed = clamp(speed + direction, 1, 10);
+        }
+    } else if(current_menu == MENU_SETTINGS) {
+        if(menu_selection == 0) {
+            controller_sensitivity = clamp(controller_sensitivity + (direction * 10), 50, 150);
+        } else if(menu_selection == 1) {
+            auto_hide_menu = !auto_hide_menu;
+        } else if(menu_selection == 2) {
+            menu_timeout = clamp(menu_timeout + (direction * 1000), 2000, 10000);
+        }
+    }
+}
+
+// Handle menu selection
+void handle_menu_selection() {
+    if(current_menu == MENU_MAIN) {
+        if(menu_selection == 0) {
+            current_menu = MENU_AIM_ASSIST;
+            menu_selection = 0;
+        } else if(menu_selection == 1) {
+            current_menu = MENU_SETTINGS;
+            menu_selection = 0;
+        } else if(menu_selection == 5) {
+            menu_visible = FALSE;
+            current_menu = MENU_OFF;
+        }
+    } else if(current_menu == MENU_AIM_ASSIST) {
+        if(menu_selection == 0) {
+            aim_assist_enabled = !aim_assist_enabled;
+        } else if(menu_selection == 4) {
+            current_menu = MENU_MAIN;
+            menu_selection = 0;
+        }
+    } else if(current_menu == MENU_SETTINGS) {
+        if(menu_selection == 3) {
+            // Reset settings
+            intensity = 30;
+            speed = 2;
+            controller_sensitivity = 100;
+            auto_hide_menu = TRUE;
+            menu_timeout = 5000;
+        } else if(menu_selection == 4) {
+            current_menu = MENU_MAIN;
+            menu_selection = 1;
+        }
+    }
+}
+
+// Handle menu back
+void handle_menu_back() {
+    if(current_menu == MENU_MAIN) {
+        menu_visible = FALSE;
+        current_menu = MENU_OFF;
+    } else {
+        current_menu = MENU_MAIN;
+        menu_selection = 0;
+    }
+}
+
+// Get max menu items
+int get_max_menu_items() {
+    if(current_menu == MENU_MAIN) return 6;
+    else if(current_menu == MENU_AIM_ASSIST) return 5;
+    else if(current_menu == MENU_SETTINGS) return 5;
+    return 1;
+}
+
+// Update display
+void update_display() {
+    if(!menu_visible) {
+        // Show status when not in menu
+        if(status_display_time < 2000) {
+            draw_status_overlay();
+        } else {
+            cls_oled(0);
+        }
+        return;
+    }
+    
+    cls_oled(0);
+    
+    // Draw title bar
+    rect_oled(0, 0, DISPLAY_WIDTH, 12, 1);
+    
+    // Draw menu title
+    if(current_menu == MENU_MAIN) {
+        printf(2, 2, 0, "MAIN MENU");
+    } else if(current_menu == MENU_AIM_ASSIST) {
+        printf(2, 2, 0, "AIM ASSIST");
+    } else if(current_menu == MENU_SETTINGS) {
+        printf(2, 2, 0, "SETTINGS");
+    }
+    
+    // Draw menu items
+    draw_menu_items();
+    
+    // Draw status bar
+    draw_status_bar();
+}
+
+// Draw status overlay
+void draw_status_overlay() {
+    cls_oled(0);
+    
+    // Draw status info
+    printf(2, 2, 1, "Aim Assist: %s", aim_assist_enabled ? "ON" : "OFF");
+    printf(2, 14, 1, "Shape: %s", shape_names[current_shape]);
+    printf(2, 26, 1, "Intensity: %d", intensity);
+    printf(2, 38, 1, "Speed: %d", speed);
+    
+    // Draw activity indicator
+    if(aim_assist_active) {
+        circle_oled(120, 8, 4, 1);
+        printf(100, 2, 1, "ACTIVE");
+    }
+    
+    // Draw controls help
+    printf(2, 50, 1, "Menu: Toggle, View: Quick");
+}
+
+// Draw menu items
+void draw_menu_items() {
+    int y_pos = 16;
+    int max_items = get_max_menu_items();
+    int visible_items = min(4, max_items);
+    
+    for(int i = 0; i < visible_items; i++) {
+        int item_index = menu_scroll_offset + i;
+        if(item_index >= max_items) break;
+        
+        // Draw cursor
+        if(item_index == menu_selection && cursor_visible) {
+            printf(2, y_pos, 1, ">");
+        } else {
+            printf(2, y_pos, 1, " ");
+        }
+        
+        // Draw menu item
+        if(current_menu == MENU_MAIN) {
+            printf(12, y_pos, 1, menu_main_items[item_index]);
+        } else if(current_menu == MENU_AIM_ASSIST) {
+            printf(12, y_pos, 1, menu_aim_items[item_index]);
+            draw_aim_values(item_index, y_pos);
+        } else if(current_menu == MENU_SETTINGS) {
+            printf(12, y_pos, 1, menu_settings_items[item_index]);
+            draw_settings_values(item_index, y_pos);
+        }
+        
+        y_pos += 12;
+    }
+}
+
+// Draw aim assist values
+void draw_aim_values(int item_index, int y_pos) {
+    if(item_index == 0) {
+        printf(90, y_pos, 1, aim_assist_enabled ? "ON" : "OFF");
+    } else if(item_index == 1) {
+        printf(75, y_pos, 1, shape_names[current_shape]);
+    } else if(item_index == 2) {
+        printf(90, y_pos, 1, "%d", intensity);
+    } else if(item_index == 3) {
+        printf(90, y_pos, 1, "%d", speed);
+    }
+}
+
+// Draw settings values
+void draw_settings_values(int item_index, int y_pos) {
+    if(item_index == 0) {
+        printf(90, y_pos, 1, "%d%%", controller_sensitivity);
+    } else if(item_index == 1) {
+        printf(90, y_pos, 1, auto_hide_menu ? "ON" : "OFF");
+    } else if(item_index == 2) {
+        printf(90, y_pos, 1, "%ds", menu_timeout / 1000);
+    }
+}
+
+// Draw status bar
+void draw_status_bar() {
+    line_oled(0, 56, DISPLAY_WIDTH, 56, 1);
+    printf(2, 58, 1, "A:Select B:Back");
+}
+
+// Math functions
+int custom_sin(int degrees) {
+    int sine_table[91] = {
+        0, 2, 3, 5, 7, 9, 10, 12, 14, 16, 17, 19, 21, 22, 24, 26, 28, 29, 31, 33,
+        34, 36, 37, 39, 41, 42, 44, 45, 47, 48, 50, 52, 53, 54, 56, 57, 59, 60, 62, 63,
+        64, 66, 67, 68, 69, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85,
+        86, 87, 87, 88, 89, 90, 90, 91, 91, 92, 92, 93, 93, 94, 94, 94, 95, 95, 95, 96,
+        96, 96, 96, 97, 97, 97, 97, 97, 98, 98, 98
+    };
+    
+    degrees = degrees % 360;
+    if(degrees < 0) degrees += 360;
+    
+    if(degrees <= 90) return sine_table[degrees];
+    else if(degrees <= 180) return sine_table[180 - degrees];
+    else if(degrees <= 270) return -sine_table[degrees - 180];
+    else return -sine_table[360 - degrees];
+}
+
+int custom_cos(int degrees) {
+    return custom_sin(degrees + 90);
+}
+
+int custom_random(int max_val) {
+    random_seed = (random_seed * 1103515245 + 12345) & 0x7fffffff;
+    return (random_seed % max_val);
+}
+
+// Utility functions
+int min(int a, int b) {
+    return (a < b) ? a : b;
+}
+
+int clamp(int value, int min_val, int max_val) {
+    if(value < min_val) return min_val;
+    if(value > max_val) return max_val;
+    return value;
+}

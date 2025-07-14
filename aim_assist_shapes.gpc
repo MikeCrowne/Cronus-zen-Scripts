@@ -1,0 +1,190 @@
+/*
+ * GPC Aim Assist with Multiple Shapes
+ * Activated with LT or RT
+ * Features: Circle, Triangle, Spiral, Helix, and Scared (Erratic) shapes
+ * 
+ * Controls:
+ * - LT/RT: Activate aim assist
+ * - D-Pad Up/Down: Change shape
+ * - D-Pad Left/Right: Adjust intensity
+ */
+
+// Shape definitions
+#define SHAPE_CIRCLE    0
+#define SHAPE_TRIANGLE  1
+#define SHAPE_SPIRAL    2
+#define SHAPE_HELIX     3
+#define SHAPE_SCARED    4
+
+// Configuration variables
+int current_shape = SHAPE_CIRCLE;
+int intensity = 30;
+int speed = 2;
+int pattern_step = 0;
+int pattern_time = 0;
+int shape_radius = 25;
+int spiral_expansion = 0;
+int scared_offset_x = 0;
+int scared_offset_y = 0;
+
+// Math helper variables
+int angle = 0;
+int triangle_side = 0;
+int triangle_progress = 0;
+
+// Shape change debounce
+int shape_change_time = 0;
+int intensity_change_time = 0;
+
+main {
+    // Shape selection with D-Pad
+    if(event_press(XB1_UP) && get_ptime(XB1_UP) > 200) {
+        current_shape = (current_shape + 1) % 5;
+        shape_change_time = 0;
+        pattern_step = 0;
+        angle = 0;
+        triangle_side = 0;
+        triangle_progress = 0;
+        spiral_expansion = 0;
+    }
+    
+    if(event_press(XB1_DOWN) && get_ptime(XB1_DOWN) > 200) {
+        current_shape = (current_shape - 1 + 5) % 5;
+        shape_change_time = 0;
+        pattern_step = 0;
+        angle = 0;
+        triangle_side = 0;
+        triangle_progress = 0;
+        spiral_expansion = 0;
+    }
+    
+    // Intensity adjustment
+    if(event_press(XB1_LEFT) && get_ptime(XB1_LEFT) > 200) {
+        intensity = clamp(intensity - 5, 10, 50);
+        intensity_change_time = 0;
+    }
+    
+    if(event_press(XB1_RIGHT) && get_ptime(XB1_RIGHT) > 200) {
+        intensity = clamp(intensity + 5, 10, 50);
+        intensity_change_time = 0;
+    }
+    
+    // Activate aim assist with LT or RT
+    if(get_val(XB1_LT) > 50 || get_val(XB1_RT) > 50) {
+        combo_run(aim_assist_pattern);
+    }
+    
+    // Update timers
+    pattern_time += get_rtime();
+    shape_change_time += get_rtime();
+    intensity_change_time += get_rtime();
+}
+
+combo aim_assist_pattern {
+    int stick_x = 0;
+    int stick_y = 0;
+    
+    // Generate movement based on current shape
+    if(current_shape == SHAPE_CIRCLE) {
+        // Circle pattern
+        stick_x = (intensity * cos(angle)) / 100;
+        stick_y = (intensity * sin(angle)) / 100;
+        angle = (angle + speed) % 360;
+    }
+    else if(current_shape == SHAPE_TRIANGLE) {
+        // Triangle pattern
+        if(triangle_side == 0) {
+            // Side 1: Top to bottom-right
+            stick_x = (triangle_progress * intensity) / 200;
+            stick_y = -(triangle_progress * intensity) / 200;
+        }
+        else if(triangle_side == 1) {
+            // Side 2: Bottom-right to bottom-left
+            stick_x = (intensity / 2) - (triangle_progress * intensity) / 100;
+            stick_y = -(intensity / 2);
+        }
+        else {
+            // Side 3: Bottom-left to top
+            stick_x = -(intensity / 2) + (triangle_progress * intensity) / 200;
+            stick_y = -(intensity / 2) + (triangle_progress * intensity) / 200;
+        }
+        
+        triangle_progress += speed * 2;
+        if(triangle_progress >= 100) {
+            triangle_progress = 0;
+            triangle_side = (triangle_side + 1) % 3;
+        }
+    }
+    else if(current_shape == SHAPE_SPIRAL) {
+        // Spiral pattern
+        int spiral_radius = (intensity * spiral_expansion) / 100;
+        stick_x = (spiral_radius * cos(angle)) / 100;
+        stick_y = (spiral_radius * sin(angle)) / 100;
+        angle = (angle + speed) % 360;
+        spiral_expansion += 1;
+        if(spiral_expansion > 100) {
+            spiral_expansion = 0;
+        }
+    }
+    else if(current_shape == SHAPE_HELIX) {
+        // Helix pattern (3D spiral projected to 2D)
+        int helix_radius = intensity / 2;
+        stick_x = (helix_radius * cos(angle)) / 100;
+        stick_y = (intensity * sin(angle * 2)) / 200; // Different frequency for helix effect
+        angle = (angle + speed) % 360;
+    }
+    else if(current_shape == SHAPE_SCARED) {
+        // Scared/Erratic pattern
+        scared_offset_x = (random(intensity * 2) - intensity) / 2;
+        scared_offset_y = (random(intensity * 2) - intensity) / 2;
+        
+        // Add some base circular motion with erratic offsets
+        stick_x = ((intensity / 3) * cos(angle)) / 100 + scared_offset_x;
+        stick_y = ((intensity / 3) * sin(angle)) / 100 + scared_offset_y;
+        angle = (angle + speed + random(6) - 3) % 360; // Random speed variation
+    }
+    
+    // Apply the calculated movement to right stick
+    set_val(XB1_RX, clamp(get_val(XB1_RX) + stick_x, -100, 100));
+    set_val(XB1_RY, clamp(get_val(XB1_RY) + stick_y, -100, 100));
+    
+    wait(20); // 50Hz update rate
+}
+
+// Helper function for clamping values
+int clamp(int value, int min_val, int max_val) {
+    if(value < min_val) return min_val;
+    if(value > max_val) return max_val;
+    return value;
+}
+
+// Simplified math functions (since GPC might not have full trig support)
+int sin(int degrees) {
+    // Simple sine approximation using lookup table
+    int sine_table[91] = {
+        0, 2, 3, 5, 7, 9, 10, 12, 14, 16, 17, 19, 21, 22, 24, 26, 28, 29, 31, 33,
+        34, 36, 37, 39, 41, 42, 44, 45, 47, 48, 50, 52, 53, 54, 56, 57, 59, 60, 62, 63,
+        64, 66, 67, 68, 69, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85,
+        86, 87, 87, 88, 89, 90, 90, 91, 91, 92, 92, 93, 93, 94, 94, 94, 95, 95, 95, 96,
+        96, 96, 96, 97, 97, 97, 97, 97, 98, 98, 98
+    };
+    
+    degrees = degrees % 360;
+    if(degrees < 0) degrees += 360;
+    
+    if(degrees <= 90) return sine_table[degrees];
+    else if(degrees <= 180) return sine_table[180 - degrees];
+    else if(degrees <= 270) return -sine_table[degrees - 180];
+    else return -sine_table[360 - degrees];
+}
+
+int cos(int degrees) {
+    return sin(degrees + 90);
+}
+
+// Random number generator (simple linear congruential generator)
+int random_seed = 1;
+int random(int max_val) {
+    random_seed = (random_seed * 1103515245 + 12345) & 0x7fffffff;
+    return (random_seed % max_val);
+}
