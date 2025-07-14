@@ -1,0 +1,192 @@
+/*
+ * Advanced Aim Assist GPC Script
+ * Features: Circle, Triangle, Spiral, Helix, and Scared patterns
+ * Activation: LT or RT
+ * Author: AI Assistant
+ */
+
+#include <controller.gph>
+
+// Configuration constants
+#define SENSITIVITY 30          // Aim assist sensitivity
+#define PATTERN_SPEED 8        // Speed of pattern execution
+#define PATTERN_SIZE 25        // Size of movement patterns
+
+// Pattern selection variables
+int pattern_mode = 0;          // 0=circle, 1=triangle, 2=spiral, 3=helix, 4=scared
+int pattern_step = 0;          // Current step in pattern
+int pattern_timer = 0;         // Timer for pattern execution
+bool aim_assist_active = false;
+
+// Movement calculation variables
+int move_x = 0;
+int move_y = 0;
+fix32 angle = 0.0;
+int spiral_radius = 0;
+int triangle_side = 0;
+int scared_direction = 1;
+
+main {
+    // Check for activation (LT or RT pressed)
+    if (get_val(XB1_LT) > 50 || get_val(XB1_RT) > 50) {
+        if (!aim_assist_active) {
+            aim_assist_active = true;
+            pattern_timer = 0;
+            pattern_step = 0;
+        }
+    } else {
+        aim_assist_active = false;
+    }
+    
+    // Execute aim assist patterns when active
+    if (aim_assist_active) {
+        pattern_timer++;
+        
+        // Pattern selection based on D-pad input (optional)
+        if (get_val(XB1_UP)) pattern_mode = 0;      // Circle
+        if (get_val(XB1_RIGHT)) pattern_mode = 1;   // Triangle
+        if (get_val(XB1_DOWN)) pattern_mode = 2;    // Spiral
+        if (get_val(XB1_LEFT)) pattern_mode = 3;    // Helix
+        if (get_val(XB1_Y)) pattern_mode = 4;       // Scared
+        
+        // Execute pattern every PATTERN_SPEED frames
+        if (pattern_timer >= PATTERN_SPEED) {
+            pattern_timer = 0;
+            execute_pattern();
+        }
+        
+        // Apply calculated movement to right stick
+        set_val(XB1_RX, clamp(get_val(XB1_RX) + move_x, -100, 100));
+        set_val(XB1_RY, clamp(get_val(XB1_RY) + move_y, -100, 100));
+    }
+}
+
+// Function to execute the selected pattern
+function execute_pattern() {
+    switch (pattern_mode) {
+        case 0: // Circle pattern
+            circle_pattern();
+            break;
+        case 1: // Triangle pattern
+            triangle_pattern();
+            break;
+        case 2: // Spiral pattern
+            spiral_pattern();
+            break;
+        case 3: // Helix pattern
+            helix_pattern();
+            break;
+        case 4: // Scared pattern
+            scared_pattern();
+            break;
+    }
+    
+    pattern_step++;
+    if (pattern_step >= 360) pattern_step = 0;
+}
+
+// Circle pattern implementation
+function circle_pattern() {
+    angle = fix32(pattern_step * 2);
+    move_x = fix32_to_int(sin(angle) * PATTERN_SIZE);
+    move_y = fix32_to_int(cos(angle) * PATTERN_SIZE);
+}
+
+// Triangle pattern implementation
+function triangle_pattern() {
+    int side_length = 120; // 360/3 = 120 degrees per side
+    triangle_side = pattern_step / side_length;
+    int step_in_side = pattern_step % side_length;
+    
+    switch (triangle_side) {
+        case 0: // First side (horizontal)
+            move_x = (step_in_side * PATTERN_SIZE) / side_length;
+            move_y = 0;
+            break;
+        case 1: // Second side (diagonal down-left)
+            move_x = PATTERN_SIZE - (step_in_side * PATTERN_SIZE) / (side_length * 2);
+            move_y = (step_in_side * PATTERN_SIZE) / side_length;
+            break;
+        case 2: // Third side (diagonal up-left)
+            move_x = -(step_in_side * PATTERN_SIZE) / (side_length * 2);
+            move_y = PATTERN_SIZE - (step_in_side * PATTERN_SIZE) / side_length;
+            break;
+    }
+}
+
+// Spiral pattern implementation
+function spiral_pattern() {
+    spiral_radius = (pattern_step * PATTERN_SIZE) / 180;
+    angle = fix32(pattern_step * 4);
+    move_x = fix32_to_int(sin(angle) * spiral_radius);
+    move_y = fix32_to_int(cos(angle) * spiral_radius);
+}
+
+// Helix pattern implementation (3D spiral projected to 2D)
+function helix_pattern() {
+    angle = fix32(pattern_step * 3);
+    int helix_height = (pattern_step * PATTERN_SIZE) / 180;
+    move_x = fix32_to_int(sin(angle) * PATTERN_SIZE);
+    move_y = fix32_to_int(cos(angle) * PATTERN_SIZE / 2) + (helix_height / 2);
+}
+
+// Scared pattern implementation (erratic/jittery movement)
+function scared_pattern() {
+    // Create erratic, scared-like movement
+    if (pattern_step % 20 == 0) {
+        scared_direction = -scared_direction;
+    }
+    
+    int jitter_x = (rand() % 20) - 10;
+    int jitter_y = (rand() % 20) - 10;
+    
+    move_x = (scared_direction * PATTERN_SIZE / 3) + jitter_x;
+    move_y = (sin(fix32(pattern_step * 8)) * PATTERN_SIZE / 2) + jitter_y;
+    
+    // Add random spikes for "scared" effect
+    if (rand() % 10 == 0) {
+        move_x *= 2;
+        move_y *= 2;
+    }
+}
+
+// Utility function to clamp values
+function clamp(int value, int min_val, int max_val) {
+    if (value < min_val) return min_val;
+    if (value > max_val) return max_val;
+    return value;
+}
+
+// Random number generator (simple implementation)
+function rand() {
+    static int seed = 1;
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed;
+}
+
+/*
+ * USAGE INSTRUCTIONS:
+ * 
+ * 1. Load this script into your Cronus/Titan device
+ * 2. Hold LT or RT to activate aim assist
+ * 3. Use D-pad to change patterns while active:
+ *    - UP: Circle pattern
+ *    - RIGHT: Triangle pattern  
+ *    - DOWN: Spiral pattern
+ *    - LEFT: Helix pattern
+ *    - Y: Scared pattern
+ * 
+ * 4. Adjust SENSITIVITY, PATTERN_SPEED, and PATTERN_SIZE constants as needed
+ * 
+ * FEATURES:
+ * - Circle: Smooth circular movement
+ * - Triangle: Sharp triangular movement pattern
+ * - Spiral: Expanding spiral movement
+ * - Helix: 3D helix pattern projected to 2D
+ * - Scared: Erratic, jittery movement with random spikes
+ * 
+ * NOTES:
+ * - Patterns automatically cycle through 360 steps
+ * - Movement is applied relative to current stick position
+ * - All patterns are designed to assist with aim tracking
+ */

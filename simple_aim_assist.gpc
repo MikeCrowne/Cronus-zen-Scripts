@@ -1,0 +1,92 @@
+/*
+ * Simple Aim Assist GPC Script
+ * Basic implementation with all requested patterns
+ * Hold LT or RT to activate
+ */
+
+#include <controller.gph>
+
+// Settings
+#define SPEED 10
+#define SIZE 20
+
+// Variables
+int pattern = 0;    // Current pattern (0-4)
+int step = 0;       // Animation step
+int timer = 0;      // Timer for smooth movement
+bool active = false;
+
+main {
+    // Activate with LT or RT
+    if (get_val(XB1_LT) > 50 || get_val(XB1_RT) > 50) {
+        active = true;
+    } else {
+        active = false;
+        step = 0;
+    }
+    
+    // Change pattern with D-pad
+    if (get_val(XB1_UP)) pattern = 0;     // Circle
+    if (get_val(XB1_RIGHT)) pattern = 1;  // Triangle
+    if (get_val(XB1_DOWN)) pattern = 2;   // Spiral
+    if (get_val(XB1_LEFT)) pattern = 3;   // Helix
+    if (get_val(XB1_Y)) pattern = 4;      // Scared
+    
+    // Execute pattern when active
+    if (active) {
+        timer++;
+        if (timer >= SPEED) {
+            timer = 0;
+            step++;
+            if (step >= 360) step = 0;
+            
+            int x = 0, y = 0;
+            
+            // Calculate movement based on pattern
+            if (pattern == 0) {
+                // Circle
+                x = sin(step * 2) * SIZE / 100;
+                y = cos(step * 2) * SIZE / 100;
+            }
+            else if (pattern == 1) {
+                // Triangle
+                int side = step / 120;
+                int pos = step % 120;
+                if (side == 0) {
+                    x = pos * SIZE / 120;
+                    y = 0;
+                } else if (side == 1) {
+                    x = SIZE - pos * SIZE / 240;
+                    y = pos * SIZE / 120;
+                } else {
+                    x = -pos * SIZE / 240;
+                    y = SIZE - pos * SIZE / 120;
+                }
+            }
+            else if (pattern == 2) {
+                // Spiral
+                int radius = step * SIZE / 180;
+                x = sin(step * 4) * radius / 100;
+                y = cos(step * 4) * radius / 100;
+            }
+            else if (pattern == 3) {
+                // Helix
+                x = sin(step * 3) * SIZE / 100;
+                y = cos(step * 3) * SIZE / 200 + step * SIZE / 360;
+            }
+            else if (pattern == 4) {
+                // Scared (erratic)
+                x = (step % 2 == 0 ? 1 : -1) * SIZE / 3;
+                y = sin(step * 8) * SIZE / 200;
+                if (step % 10 == 0) {
+                    x *= 2;
+                    y *= 2;
+                }
+            }
+            
+            // Apply movement to right stick
+            set_val(XB1_RX, get_val(XB1_RX) + x);
+            set_val(XB1_RY, get_val(XB1_RY) + y);
+        }
+    }
+}
