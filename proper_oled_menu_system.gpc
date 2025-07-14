@@ -1,0 +1,545 @@
+/*
+ * Proper GPC OLED Menu System
+ * Following Official Cronus Documentation Structure
+ * 
+ * Features:
+ * - Multi-level menu navigation
+ * - Proper data section with string constants
+ * - OLED display functions with correct syntax
+ * - Custom OLED buttons implementation
+ */
+
+// ===== DEFINITIONS SECTION =====
+define MENU_OFF        = 0;
+define MENU_MAIN       = 1;
+define MENU_AIM_ASSIST = 2;
+define MENU_SETTINGS   = 3;
+define MENU_CONTROLLER = 4;
+define MENU_DISPLAY    = 5;
+define MENU_ABOUT      = 6;
+
+define MAX_MENU_ITEMS  = 6;
+define DISPLAY_WIDTH   = 128;
+define DISPLAY_HEIGHT  = 64;
+define FONT_SMALL      = 0;
+define FONT_MEDIUM     = 1;
+
+define CURSOR_CHAR     = 62; // '>' character
+define SPACE_CHAR      = 32; // ' ' character
+
+// ===== DATA SECTION =====
+data(
+    "MAIN MENU", 0,
+    "AIM ASSIST", 0,
+    "SETTINGS", 0,
+    "CONTROLLER", 0,
+    "DISPLAY", 0,
+    "ABOUT", 0,
+    "Exit", 0,
+    "Aim Assist", 0,
+    "Settings", 0,
+    "Controller", 0,
+    "Display", 0,
+    "About", 0,
+    "Enable/Disable", 0,
+    "Shape", 0,
+    "Intensity", 0,
+    "Speed", 0,
+    "Back", 0,
+    "Sensitivity", 0,
+    "Auto Hide Menu", 0,
+    "Menu Timeout", 0,
+    "Reset Settings", 0,
+    "Deadzone", 0,
+    "Response Curve", 0,
+    "Calibrate", 0,
+    "Brightness", 0,
+    "Contrast", 0,
+    "Screen Saver", 0,
+    "Cronus Zen Menu v1.0", 0,
+    "ON", 0,
+    "OFF", 0,
+    "Circle", 0,
+    "Triangle", 0,
+    "Spiral", 0,
+    "Helix", 0,
+    "Scared", 0,
+    "A:Select B:Back", 0,
+    "D-Pad: Navigate", 0,
+    "Menu: Toggle", 0
+);
+
+// ===== CONST ARRAYS SECTION =====
+const int8 string_offsets[] = {
+    0, 10, 21, 30, 41, 49, 55, 60, 72, 81, 92, 100, 106, 120, 126, 136, 142, 147,
+    158, 172, 185, 200, 209, 224, 234, 245, 254, 262, 283, 286, 290, 297, 306, 313,
+    319, 326, 342, 357, 371
+};
+
+const int8 main_menu_items[] = { 7, 8, 9, 10, 11, 6 }; // String indices for main menu
+const int8 aim_menu_items[] = { 12, 13, 14, 15, 16 }; // String indices for aim assist menu
+const int8 settings_menu_items[] = { 17, 18, 19, 20, 16 }; // String indices for settings menu
+const int8 controller_menu_items[] = { 21, 22, 23, 16 }; // String indices for controller menu
+const int8 display_menu_items[] = { 24, 25, 26, 16 }; // String indices for display menu
+const int8 shape_names[] = { 30, 31, 32, 33, 34 }; // Shape name indices
+
+// ===== VARIABLES SECTION =====
+int current_menu = MENU_OFF;
+int menu_selection = 0;
+int menu_scroll_offset = 0;
+int menu_visible = FALSE;
+int menu_toggle_time = 0;
+int selection_change_time = 0;
+
+// Menu settings
+int aim_assist_enabled = TRUE;
+int aim_assist_intensity = 30;
+int aim_assist_shape = 0;
+int aim_assist_speed = 2;
+int controller_sensitivity = 100;
+int display_brightness = 80;
+int display_contrast = 70;
+int auto_hide_menu = TRUE;
+int menu_timeout = 5000;
+
+// Display variables
+int display_refresh_time = 0;
+int display_needs_update = TRUE;
+int cursor_blink_time = 0;
+int cursor_visible = TRUE;
+
+// ===== INIT SECTION =====
+init {
+    // Initialize OLED display
+    cls_oled(0);
+    
+    // Initialize menu system
+    current_menu = MENU_OFF;
+    menu_selection = 0;
+    menu_scroll_offset = 0;
+    menu_visible = FALSE;
+    
+    // Initialize settings
+    aim_assist_enabled = TRUE;
+    aim_assist_intensity = 30;
+    aim_assist_shape = 0;
+    controller_sensitivity = 100;
+    display_brightness = 80;
+    auto_hide_menu = TRUE;
+    menu_timeout = 5000;
+    
+    // Show initial splash
+    show_splash_screen();
+}
+
+// ===== MAIN SECTION =====
+main {
+    // Menu toggle with Menu button
+    if(event_press(XB1_MENU) && get_ptime(XB1_MENU) > 200) {
+        menu_visible = !menu_visible;
+        if(menu_visible) {
+            current_menu = MENU_MAIN;
+            menu_selection = 0;
+            menu_scroll_offset = 0;
+        } else {
+            current_menu = MENU_OFF;
+        }
+        menu_toggle_time = 0;
+        display_needs_update = TRUE;
+    }
+    
+    // Quick settings with View button
+    if(event_press(XB1_VIEW) && get_ptime(XB1_VIEW) > 200) {
+        if(menu_visible && current_menu == MENU_SETTINGS) {
+            menu_visible = FALSE;
+            current_menu = MENU_OFF;
+        } else {
+            menu_visible = TRUE;
+            current_menu = MENU_SETTINGS;
+            menu_selection = 0;
+        }
+        display_needs_update = TRUE;
+    }
+    
+    // Auto-hide menu after timeout
+    if(menu_visible && auto_hide_menu && menu_toggle_time > menu_timeout) {
+        menu_visible = FALSE;
+        current_menu = MENU_OFF;
+        display_needs_update = TRUE;
+    }
+    
+    // Handle menu navigation when visible
+    if(menu_visible) {
+        handle_menu_navigation();
+    }
+    
+    // Update display if needed
+    if(display_needs_update || display_refresh_time > 100) {
+        update_display();
+        display_refresh_time = 0;
+        display_needs_update = FALSE;
+    }
+    
+    // Update timers
+    menu_toggle_time = menu_toggle_time + get_rtime();
+    display_refresh_time = display_refresh_time + get_rtime();
+    selection_change_time = selection_change_time + get_rtime();
+    cursor_blink_time = cursor_blink_time + get_rtime();
+    
+    // Cursor blink for better visibility
+    if(cursor_blink_time > 500) {
+        cursor_visible = !cursor_visible;
+        cursor_blink_time = 0;
+        if(menu_visible) display_needs_update = TRUE;
+    }
+}
+
+// ===== COMBO SECTION =====
+combo handle_menu_navigation {
+    int max_items = get_max_menu_items();
+    
+    // Navigate up
+    if(event_press(XB1_UP) && selection_change_time > 150) {
+        menu_selection = (menu_selection - 1 + max_items) % max_items;
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+        
+        // Scroll if needed
+        if(menu_selection < menu_scroll_offset) {
+            menu_scroll_offset = menu_selection;
+        }
+    }
+    
+    // Navigate down  
+    if(event_press(XB1_DOWN) && selection_change_time > 150) {
+        menu_selection = (menu_selection + 1) % max_items;
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+        
+        // Scroll if needed
+        if(menu_selection >= menu_scroll_offset + 4) {
+            menu_scroll_offset = menu_selection - 3;
+        }
+    }
+    
+    // Handle left/right for value adjustment
+    if(event_press(XB1_LEFT) && selection_change_time > 150) {
+        combo_run(handle_value_change_left);
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+    }
+    
+    if(event_press(XB1_RIGHT) && selection_change_time > 150) {
+        combo_run(handle_value_change_right);
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+    }
+    
+    // Handle selection with A button
+    if(event_press(XB1_A) && selection_change_time > 200) {
+        combo_run(handle_menu_selection);
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+    }
+    
+    // Handle back with B button
+    if(event_press(XB1_B) && selection_change_time > 200) {
+        combo_run(handle_menu_back);
+        selection_change_time = 0;
+        display_needs_update = TRUE;
+    }
+    
+    wait(20);
+}
+
+combo handle_value_change_left {
+    if(current_menu == MENU_AIM_ASSIST) {
+        if(menu_selection == 0) {
+            aim_assist_enabled = !aim_assist_enabled;
+        } else if(menu_selection == 1) {
+            aim_assist_shape = (aim_assist_shape - 1 + 5) % 5;
+        } else if(menu_selection == 2) {
+            aim_assist_intensity = aim_assist_intensity - 5;
+            if(aim_assist_intensity < 10) aim_assist_intensity = 10;
+        } else if(menu_selection == 3) {
+            aim_assist_speed = aim_assist_speed - 1;
+            if(aim_assist_speed < 1) aim_assist_speed = 1;
+        }
+    } else if(current_menu == MENU_SETTINGS) {
+        if(menu_selection == 0) {
+            controller_sensitivity = controller_sensitivity - 10;
+            if(controller_sensitivity < 50) controller_sensitivity = 50;
+        } else if(menu_selection == 1) {
+            auto_hide_menu = !auto_hide_menu;
+        } else if(menu_selection == 2) {
+            menu_timeout = menu_timeout - 1000;
+            if(menu_timeout < 2000) menu_timeout = 2000;
+        }
+    } else if(current_menu == MENU_DISPLAY) {
+        if(menu_selection == 0) {
+            display_brightness = display_brightness - 5;
+            if(display_brightness < 20) display_brightness = 20;
+        } else if(menu_selection == 1) {
+            display_contrast = display_contrast - 5;
+            if(display_contrast < 30) display_contrast = 30;
+        }
+    }
+}
+
+combo handle_value_change_right {
+    if(current_menu == MENU_AIM_ASSIST) {
+        if(menu_selection == 0) {
+            aim_assist_enabled = !aim_assist_enabled;
+        } else if(menu_selection == 1) {
+            aim_assist_shape = (aim_assist_shape + 1) % 5;
+        } else if(menu_selection == 2) {
+            aim_assist_intensity = aim_assist_intensity + 5;
+            if(aim_assist_intensity > 100) aim_assist_intensity = 100;
+        } else if(menu_selection == 3) {
+            aim_assist_speed = aim_assist_speed + 1;
+            if(aim_assist_speed > 10) aim_assist_speed = 10;
+        }
+    } else if(current_menu == MENU_SETTINGS) {
+        if(menu_selection == 0) {
+            controller_sensitivity = controller_sensitivity + 10;
+            if(controller_sensitivity > 150) controller_sensitivity = 150;
+        } else if(menu_selection == 1) {
+            auto_hide_menu = !auto_hide_menu;
+        } else if(menu_selection == 2) {
+            menu_timeout = menu_timeout + 1000;
+            if(menu_timeout > 10000) menu_timeout = 10000;
+        }
+    } else if(current_menu == MENU_DISPLAY) {
+        if(menu_selection == 0) {
+            display_brightness = display_brightness + 5;
+            if(display_brightness > 100) display_brightness = 100;
+        } else if(menu_selection == 1) {
+            display_contrast = display_contrast + 5;
+            if(display_contrast > 100) display_contrast = 100;
+        }
+    }
+}
+
+combo handle_menu_selection {
+    if(current_menu == MENU_MAIN) {
+        if(menu_selection == 0) {
+            current_menu = MENU_AIM_ASSIST;
+            menu_selection = 0;
+        } else if(menu_selection == 1) {
+            current_menu = MENU_SETTINGS;
+            menu_selection = 0;
+        } else if(menu_selection == 2) {
+            current_menu = MENU_CONTROLLER;
+            menu_selection = 0;
+        } else if(menu_selection == 3) {
+            current_menu = MENU_DISPLAY;
+            menu_selection = 0;
+        } else if(menu_selection == 4) {
+            current_menu = MENU_ABOUT;
+            menu_selection = 0;
+        } else if(menu_selection == 5) {
+            menu_visible = FALSE;
+            current_menu = MENU_OFF;
+        }
+    } else if(current_menu == MENU_AIM_ASSIST) {
+        if(menu_selection == 0) {
+            aim_assist_enabled = !aim_assist_enabled;
+        } else if(menu_selection == 4) {
+            current_menu = MENU_MAIN;
+            menu_selection = 0;
+        }
+    } else if(current_menu == MENU_SETTINGS) {
+        if(menu_selection == 3) {
+            // Reset settings
+            aim_assist_intensity = 30;
+            aim_assist_speed = 2;
+            controller_sensitivity = 100;
+            display_brightness = 80;
+            display_contrast = 70;
+            auto_hide_menu = TRUE;
+            menu_timeout = 5000;
+        } else if(menu_selection == 4) {
+            current_menu = MENU_MAIN;
+            menu_selection = 1;
+        }
+    }
+    
+    // Handle back buttons for other menus
+    if(menu_selection == get_max_menu_items() - 1) {
+        if(current_menu != MENU_MAIN && current_menu != MENU_ABOUT) {
+            current_menu = MENU_MAIN;
+            menu_selection = 0;
+        }
+    }
+}
+
+combo handle_menu_back {
+    if(current_menu == MENU_MAIN) {
+        menu_visible = FALSE;
+        current_menu = MENU_OFF;
+    } else {
+        current_menu = MENU_MAIN;
+        menu_selection = 0;
+    }
+}
+
+combo show_splash_screen {
+    cls_oled(0);
+    printf(20, 20, FONT_MEDIUM, 1, string_offsets[27]); // "Cronus Zen Menu v1.0"
+    printf(30, 40, FONT_SMALL, 1, string_offsets[37]); // "Menu: Toggle"
+    wait(2000);
+    cls_oled(0);
+}
+
+// ===== FUNCTIONS SECTION =====
+function get_max_menu_items() {
+    if(current_menu == MENU_MAIN) return 6;
+    else if(current_menu == MENU_AIM_ASSIST) return 5;
+    else if(current_menu == MENU_SETTINGS) return 5;
+    else if(current_menu == MENU_CONTROLLER) return 4;
+    else if(current_menu == MENU_DISPLAY) return 4;
+    else if(current_menu == MENU_ABOUT) return 1;
+    return 1;
+}
+
+function update_display() {
+    if(!menu_visible) {
+        cls_oled(0);
+        return 0;
+    }
+    
+    cls_oled(0);
+    
+    // Draw title bar
+    rect_oled(0, 0, DISPLAY_WIDTH, 12, 1, 1);
+    
+    // Draw menu title
+    if(current_menu == MENU_MAIN) {
+        printf(2, 2, FONT_SMALL, 0, string_offsets[0]); // "MAIN MENU"
+    } else if(current_menu == MENU_AIM_ASSIST) {
+        printf(2, 2, FONT_SMALL, 0, string_offsets[1]); // "AIM ASSIST"
+    } else if(current_menu == MENU_SETTINGS) {
+        printf(2, 2, FONT_SMALL, 0, string_offsets[2]); // "SETTINGS"
+    } else if(current_menu == MENU_CONTROLLER) {
+        printf(2, 2, FONT_SMALL, 0, string_offsets[3]); // "CONTROLLER"
+    } else if(current_menu == MENU_DISPLAY) {
+        printf(2, 2, FONT_SMALL, 0, string_offsets[4]); // "DISPLAY"
+    } else if(current_menu == MENU_ABOUT) {
+        printf(2, 2, FONT_SMALL, 0, string_offsets[5]); // "ABOUT"
+    }
+    
+    // Draw menu items
+    draw_menu_items();
+    
+    // Draw status bar
+    draw_status_bar();
+    
+    return 0;
+}
+
+function draw_menu_items() {
+    int y_pos = 16;
+    int max_items = get_max_menu_items();
+    int visible_items = min_value(4, max_items);
+    int i;
+    
+    for(i = 0; i < visible_items; i = i + 1) {
+        int item_index = menu_scroll_offset + i;
+        if(item_index >= max_items) break;
+        
+        // Draw selection cursor
+        if(item_index == menu_selection && cursor_visible) {
+            putc_oled(1, CURSOR_CHAR);
+            puts_oled(2, y_pos, FONT_SMALL, 1, 1);
+        } else {
+            putc_oled(1, SPACE_CHAR);
+            puts_oled(2, y_pos, FONT_SMALL, 1, 1);
+        }
+        
+        // Draw menu item text
+        draw_menu_item_text(item_index, y_pos);
+        
+        y_pos = y_pos + 12;
+    }
+    
+    return 0;
+}
+
+function draw_menu_item_text(int item_index, int y_pos) {
+    if(current_menu == MENU_MAIN) {
+        printf(12, y_pos, FONT_SMALL, 1, string_offsets[main_menu_items[item_index]]);
+    } else if(current_menu == MENU_AIM_ASSIST) {
+        printf(12, y_pos, FONT_SMALL, 1, string_offsets[aim_menu_items[item_index]]);
+        draw_aim_assist_values(item_index, y_pos);
+    } else if(current_menu == MENU_SETTINGS) {
+        printf(12, y_pos, FONT_SMALL, 1, string_offsets[settings_menu_items[item_index]]);
+        draw_settings_values(item_index, y_pos);
+    } else if(current_menu == MENU_CONTROLLER) {
+        printf(12, y_pos, FONT_SMALL, 1, string_offsets[controller_menu_items[item_index]]);
+    } else if(current_menu == MENU_DISPLAY) {
+        printf(12, y_pos, FONT_SMALL, 1, string_offsets[display_menu_items[item_index]]);
+        draw_display_values(item_index, y_pos);
+    } else if(current_menu == MENU_ABOUT) {
+        printf(12, y_pos, FONT_SMALL, 1, string_offsets[27]); // "Cronus Zen Menu v1.0"
+    }
+    
+    return 0;
+}
+
+function draw_aim_assist_values(int item_index, int y_pos) {
+    if(item_index == 0) {
+        if(aim_assist_enabled) {
+            printf(90, y_pos, FONT_SMALL, 1, string_offsets[28]); // "ON"
+        } else {
+            printf(90, y_pos, FONT_SMALL, 1, string_offsets[29]); // "OFF"
+        }
+    } else if(item_index == 1) {
+        printf(85, y_pos, FONT_SMALL, 1, string_offsets[shape_names[aim_assist_shape]]);
+    }
+    // Note: For intensity and speed, we'd need to implement number to string conversion
+    // since GPC printf doesn't support %d format
+    
+    return 0;
+}
+
+function draw_settings_values(int item_index, int y_pos) {
+    if(item_index == 1) {
+        if(auto_hide_menu) {
+            printf(90, y_pos, FONT_SMALL, 1, string_offsets[28]); // "ON"
+        } else {
+            printf(90, y_pos, FONT_SMALL, 1, string_offsets[29]); // "OFF"
+        }
+    }
+    
+    return 0;
+}
+
+function draw_display_values(int item_index, int y_pos) {
+    // Values would be drawn here if we had number to string conversion
+    return 0;
+}
+
+function draw_status_bar() {
+    line_oled(0, 56, DISPLAY_WIDTH, 56, 1, 1);
+    printf(2, 58, FONT_SMALL, 1, string_offsets[35]); // "A:Select B:Back"
+    
+    // Show scroll indicator if needed
+    int max_items = get_max_menu_items();
+    if(max_items > 4) {
+        if(menu_scroll_offset > 0) {
+            pixel_oled(120, 58, 1);
+            pixel_oled(120, 59, 1);
+        }
+        if(menu_scroll_offset + 4 < max_items) {
+            pixel_oled(120, 62, 1);
+            pixel_oled(120, 63, 1);
+        }
+    }
+    
+    return 0;
+}
+
+function min_value(int a, int b) {
+    if(a < b) return a;
+    return b;
+}
