@@ -49,17 +49,16 @@ enum {
 };
 
 // ------------ GLOBAL VARS (GPC 1.0: All global!) ------------
-int
-    mod[_End_Mod_Plus_One_Idx_],
-    edit[_End_Edit_Plus_One_Idx_],
-    menu_active,
-    menu_state,
-    menu_timeout,
-    title_timeout,
-    current_category,
-    current_mod_in_category,
-    current_edit_in_mod,
-    show_splash;
+int mod[_End_Mod_Plus_One_Idx_];
+int edit[_End_Edit_Plus_One_Idx_];
+int menu_active;
+int menu_state;
+int menu_timeout;
+int title_timeout;
+int current_category;
+int current_mod_in_category;
+int current_edit_in_mod;
+int show_splash;
 
 // Navigation variables
 int i, j, temp_idx;
@@ -99,36 +98,6 @@ const int16 RF_Default_Burst = 3;
 const int16 AA_Default_Shape = 1;
 const int16 AA_Default_Speed = 25;
 
-// ------------ CONFIGURATION ARRAYS ------------
-
-// Which mods belong to which main menu category [min_mod_idx, max_mod_idx]
-const uint8 Main_Menu_Mod_Ranges[][] = {
-    /*All*/       { TJ_Turbo_Jump_Toggle_Idx, AA_Aim_Assist_Toggle_Idx },
-    /*Aim+Fire*/  { AR_Anti_Recoil_Toggle_Idx, AA_Aim_Assist_Toggle_Idx },
-    /*Movement*/  { TJ_Turbo_Jump_Toggle_Idx, TJ_Turbo_Jump_Toggle_Idx },
-    /*Misc*/      { RF_Rapid_Fire_Toggle_Idx, RF_Rapid_Fire_Toggle_Idx },
-    /*Settings*/  { 255, 255 } // No mods, just menu options
-};
-
-// Which edit values belong to each mod [min_edit_idx, max_edit_idx]
-const uint8 Edit_Range[][] = {
-    /*Turbo Jump*/  { TJ_Jump_Wait_Time_Idx, TJ_Jump_Wait_Time_Idx },
-    /*Anti Recoil*/ { AR_Strength_Idx, AR_Horizontal_Idx },
-    /*Rapid Fire*/  { RF_Rate_Idx, RF_Burst_Idx },
-    /*Aim Assist*/  { AA_Shape_Idx, AA_Speed_Idx }
-};
-
-// Value ranges: [min_value, max_value, default_value]
-const int16 Edit_Value_Range[][] = {
-    /*Delay*/      { 1,   2147, TJ_Jump_Wait_Time },
-    /*Strength*/   { 0,   100,  AR_Default_Strength },
-    /*Horizontal*/ { 0,   100,  AR_Default_Horizontal },
-    /*Rate*/       { 1,   50,   RF_Default_Rate },
-    /*Burst*/      { 1,   10,   RF_Default_Burst },
-    /*Shape*/      { 0,   3,    AA_Default_Shape },
-    /*Speed*/      { 1,   100,  AA_Default_Speed }
-};
-
 // ------------ INIT ------------
 init {
     // Initialize all mod toggles to OFF
@@ -137,9 +106,13 @@ init {
     }
     
     // Initialize all edit values to their defaults
-    for(i = 0; i < _End_Edit_Plus_One_Idx_; i++) {
-        edit[i] = Edit_Value_Range[i][2]; // Use default value
-    }
+    edit[TJ_Jump_Wait_Time_Idx] = TJ_Jump_Wait_Time;
+    edit[AR_Strength_Idx] = AR_Default_Strength;
+    edit[AR_Horizontal_Idx] = AR_Default_Horizontal;
+    edit[RF_Rate_Idx] = RF_Default_Rate;
+    edit[RF_Burst_Idx] = RF_Default_Burst;
+    edit[AA_Shape_Idx] = AA_Default_Shape;
+    edit[AA_Speed_Idx] = AA_Default_Speed;
     
     // Menu state initialization
     menu_active = FALSE;
@@ -189,6 +162,61 @@ main {
         menu_active = FALSE;
         combo_run(OLED_Sleep);
     }
+}
+
+// ------------ HELPER FUNCTIONS FOR CONFIGURATION ------------
+function GetCategoryMinMod(cat_idx) {
+    if(cat_idx == All_Category_Idx) return TJ_Turbo_Jump_Toggle_Idx;
+    if(cat_idx == Aim_Fire_Category_Idx) return AR_Anti_Recoil_Toggle_Idx;
+    if(cat_idx == Movement_Category_Idx) return TJ_Turbo_Jump_Toggle_Idx;
+    if(cat_idx == Misc_Category_Idx) return RF_Rapid_Fire_Toggle_Idx;
+    return 255; // Settings has no mods
+}
+
+function GetCategoryMaxMod(cat_idx) {
+    if(cat_idx == All_Category_Idx) return AA_Aim_Assist_Toggle_Idx;
+    if(cat_idx == Aim_Fire_Category_Idx) return AA_Aim_Assist_Toggle_Idx;
+    if(cat_idx == Movement_Category_Idx) return TJ_Turbo_Jump_Toggle_Idx;
+    if(cat_idx == Misc_Category_Idx) return RF_Rapid_Fire_Toggle_Idx;
+    return 255; // Settings has no mods
+}
+
+function GetModMinEdit(mod_idx) {
+    if(mod_idx == TJ_Turbo_Jump_Toggle_Idx) return TJ_Jump_Wait_Time_Idx;
+    if(mod_idx == AR_Anti_Recoil_Toggle_Idx) return AR_Strength_Idx;
+    if(mod_idx == RF_Rapid_Fire_Toggle_Idx) return RF_Rate_Idx;
+    if(mod_idx == AA_Aim_Assist_Toggle_Idx) return AA_Shape_Idx;
+    return 255;
+}
+
+function GetModMaxEdit(mod_idx) {
+    if(mod_idx == TJ_Turbo_Jump_Toggle_Idx) return TJ_Jump_Wait_Time_Idx;
+    if(mod_idx == AR_Anti_Recoil_Toggle_Idx) return AR_Horizontal_Idx;
+    if(mod_idx == RF_Rapid_Fire_Toggle_Idx) return RF_Burst_Idx;
+    if(mod_idx == AA_Aim_Assist_Toggle_Idx) return AA_Speed_Idx;
+    return 255;
+}
+
+function GetEditMinValue(edit_idx) {
+    if(edit_idx == TJ_Jump_Wait_Time_Idx) return 1;
+    if(edit_idx == AR_Strength_Idx) return 0;
+    if(edit_idx == AR_Horizontal_Idx) return 0;
+    if(edit_idx == RF_Rate_Idx) return 1;
+    if(edit_idx == RF_Burst_Idx) return 1;
+    if(edit_idx == AA_Shape_Idx) return 0;
+    if(edit_idx == AA_Speed_Idx) return 1;
+    return 0;
+}
+
+function GetEditMaxValue(edit_idx) {
+    if(edit_idx == TJ_Jump_Wait_Time_Idx) return 2147;
+    if(edit_idx == AR_Strength_Idx) return 100;
+    if(edit_idx == AR_Horizontal_Idx) return 100;
+    if(edit_idx == RF_Rate_Idx) return 50;
+    if(edit_idx == RF_Burst_Idx) return 10;
+    if(edit_idx == AA_Shape_Idx) return 3;
+    if(edit_idx == AA_Speed_Idx) return 100;
+    return 100;
 }
 
 // ------------ MENU HANDLER ------------
@@ -253,7 +281,7 @@ function HandleMainMenu() {
         current_category = (current_category + 1) % _End_Category_Plus_One_Idx_;
     }
     if(event_press(BTN_MENU_ENTER)) {
-        if(Main_Menu_Mod_Ranges[current_category][0] != 255) {
+        if(GetCategoryMinMod(current_category) != 255) {
             menu_state = MENU_STATE_MOD_LIST;
             current_mod_in_category = 0;
         }
@@ -266,8 +294,8 @@ function HandleMainMenu() {
 
 // ------------ MOD LIST ------------
 function HandleModList() {
-    int min_mod = Main_Menu_Mod_Ranges[current_category][0];
-    int max_mod = Main_Menu_Mod_Ranges[current_category][1];
+    int min_mod = GetCategoryMinMod(current_category);
+    int max_mod = GetCategoryMaxMod(current_category);
     int current_mod_idx = min_mod + current_mod_in_category;
     
     // Display category title
@@ -307,7 +335,7 @@ function HandleModList() {
     }
     if(event_press(BTN_MENU_ENTER)) {
         // Enter edit mode if this mod has editable values
-        if(Edit_Range[current_mod_idx][0] != 255) {
+        if(GetModMinEdit(current_mod_idx) != 255) {
             menu_state = MENU_STATE_EDIT;
             current_edit_in_mod = 0;
         }
@@ -319,9 +347,9 @@ function HandleModList() {
 
 // ------------ EDIT MENU ------------
 function HandleEditMenu() {
-    int current_mod_idx = Main_Menu_Mod_Ranges[current_category][0] + current_mod_in_category;
-    int min_edit = Edit_Range[current_mod_idx][0];
-    int max_edit = Edit_Range[current_mod_idx][1];
+    int current_mod_idx = GetCategoryMinMod(current_category) + current_mod_in_category;
+    int min_edit = GetModMinEdit(current_mod_idx);
+    int max_edit = GetModMaxEdit(current_mod_idx);
     int current_edit_idx = min_edit + current_edit_in_mod;
     
     // Display mod name
@@ -334,7 +362,6 @@ function HandleEditMenu() {
     
     // Display value
     temp_idx = find_digits(edit[current_edit_idx]);
-    puts_oled(90, 20, OLED_FONT_SMALL, temp_idx, OLED_WHITE, "");
     number_to_string(edit[current_edit_idx], temp_idx, 90, 20);
     
     // Display instructions
@@ -343,12 +370,12 @@ function HandleEditMenu() {
     
     // Navigation
     if(event_press(BTN_MENU_UP)) {
-        if(edit[current_edit_idx] < Edit_Value_Range[current_edit_idx][1]) {
+        if(edit[current_edit_idx] < GetEditMaxValue(current_edit_idx)) {
             edit[current_edit_idx]++;
         }
     }
     if(event_press(BTN_MENU_DOWN)) {
-        if(edit[current_edit_idx] > Edit_Value_Range[current_edit_idx][0]) {
+        if(edit[current_edit_idx] > GetEditMinValue(current_edit_idx)) {
             edit[current_edit_idx]--;
         }
     }
@@ -416,8 +443,8 @@ TO ADD NEW MODS/VALUES:
 
 1. Add enum indexes for your mod and values
 2. Add strings to Mod_Title_Strings[] and Edit_Title_Strings[]
-3. Add defaults and ranges to Edit_Value_Range[][]
-4. Link them in Edit_Range[][] and Main_Menu_Mod_Ranges[][]
+3. Add initialization in init{} for your edit values
+4. Add cases to the helper functions (GetCategoryMinMod, GetModMinEdit, etc.)
 5. Use mod[YourMod_Idx] and edit[YourValue_Idx] in your main logic
 
 Example: Adding "Auto Ping" with "Interval" setting:
@@ -425,6 +452,6 @@ Example: Adding "Auto Ping" with "Interval" setting:
 - Add Auto_Ping_Interval_Idx to edit enums  
 - Add "Auto Ping" to Mod_Title_Strings[]
 - Add "Interval" to Edit_Title_Strings[]
-- Add range/default to Edit_Value_Range[][]
-- Link in Edit_Range[][] and categorize in Main_Menu_Mod_Ranges[][]
+- Add edit[Auto_Ping_Interval_Idx] = 2000; to init{}
+- Add cases to helper functions for ranges and categorization
 */
