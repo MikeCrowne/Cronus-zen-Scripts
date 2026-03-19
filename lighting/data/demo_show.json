@@ -1,0 +1,1217 @@
+{
+  "name": "LumenFlow Demo",
+  "bpm": 120,
+  "output_enabled": true,
+  "tutorial_seen": false,
+  "fixtures": {
+    "MH1": {
+      "fixture_id": "MH1",
+      "label": "Downstage Left Spot",
+      "fixture_type": "Moving Spot",
+      "universe": 1,
+      "address": 1,
+      "group": "spots",
+      "x": -3.0,
+      "y": 3.0,
+      "z": 0.0,
+      "intensity": 0,
+      "color": [
+        80,
+        120,
+        255
+      ],
+      "pan": 0.0,
+      "tilt": 0.0,
+      "beam": 25,
+      "shutter_open": true,
+      "selected": false
+    },
+    "MH2": {
+      "fixture_id": "MH2",
+      "label": "Downstage Right Spot",
+      "fixture_type": "Moving Spot",
+      "universe": 1,
+      "address": 21,
+      "group": "spots",
+      "x": 3.0,
+      "y": 3.0,
+      "z": 0.0,
+      "intensity": 0,
+      "color": [
+        80,
+        120,
+        255
+      ],
+      "pan": 0.0,
+      "tilt": 0.0,
+      "beam": 25,
+      "shutter_open": true,
+      "selected": false
+    },
+    "W1": {
+      "fixture_id": "W1",
+      "label": "Warm Wash Left",
+      "fixture_type": "LED Wash",
+      "universe": 1,
+      "address": 41,
+      "group": "wash",
+      "x": -2.0,
+      "y": 1.2,
+      "z": 0.0,
+      "intensity": 0,
+      "color": [
+        80,
+        120,
+        255
+      ],
+      "pan": 0.0,
+      "tilt": 0.0,
+      "beam": 25,
+      "shutter_open": true,
+      "selected": false
+    },
+    "W2": {
+      "fixture_id": "W2",
+      "label": "Warm Wash Right",
+      "fixture_type": "LED Wash",
+      "universe": 1,
+      "address": 61,
+      "group": "wash",
+      "x": 2.0,
+      "y": 1.2,
+      "z": 0.0,
+      "intensity": 0,
+      "color": [
+        80,
+        120,
+        255
+      ],
+      "pan": 0.0,
+      "tilt": 0.0,
+      "beam": 25,
+      "shutter_open": true,
+      "selected": false
+    },
+    "B1": {
+      "fixture_id": "B1",
+      "label": "Back Beam Left",
+      "fixture_type": "Beam",
+      "universe": 1,
+      "address": 81,
+      "group": "beam",
+      "x": -1.0,
+      "y": 4.0,
+      "z": 0.0,
+      "intensity": 0,
+      "color": [
+        80,
+        120,
+        255
+      ],
+      "pan": 0.0,
+      "tilt": 0.0,
+      "beam": 25,
+      "shutter_open": true,
+      "selected": false
+    },
+    "B2": {
+      "fixture_id": "B2",
+      "label": "Back Beam Right",
+      "fixture_type": "Beam",
+      "universe": 1,
+      "address": 101,
+      "group": "beam",
+      "x": 1.0,
+      "y": 4.0,
+      "z": 0.0,
+      "intensity": 0,
+      "color": [
+        80,
+        120,
+        255
+      ],
+      "pan": 0.0,
+      "tilt": 0.0,
+      "beam": 25,
+      "shutter_open": true,
+      "selected": false
+    }
+  },
+  "cues": {
+    "Intro": {
+      "name": "Intro",
+      "fade_s": 2.5,
+      "follow_s": 0.0,
+      "notes": "Warm front wash for walk-in",
+      "fixture_states": {
+        "MH1": {
+          "intensity": 110,
+          "color": [
+            255,
+            160,
+            60
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "MH2": {
+          "intensity": 110,
+          "color": [
+            255,
+            160,
+            60
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "W1": {
+          "intensity": 170,
+          "color": [
+            255,
+            160,
+            60
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "W2": {
+          "intensity": 170,
+          "color": [
+            255,
+            160,
+            60
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "B1": {
+          "intensity": 90,
+          "color": [
+            255,
+            160,
+            60
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "B2": {
+          "intensity": 90,
+          "color": [
+            255,
+            160,
+            60
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        }
+      }
+    },
+    "Drop": {
+      "name": "Drop",
+      "fade_s": 0.5,
+      "follow_s": 0.0,
+      "notes": "Big chorus hit",
+      "fixture_states": {
+        "MH1": {
+          "intensity": 220,
+          "color": [
+            80,
+            120,
+            255
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "MH2": {
+          "intensity": 220,
+          "color": [
+            80,
+            120,
+            255
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "W1": {
+          "intensity": 170,
+          "color": [
+            80,
+            120,
+            255
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "W2": {
+          "intensity": 170,
+          "color": [
+            80,
+            120,
+            255
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "B1": {
+          "intensity": 255,
+          "color": [
+            80,
+            120,
+            255
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "B2": {
+          "intensity": 255,
+          "color": [
+            80,
+            120,
+            255
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        }
+      }
+    },
+    "Blackout": {
+      "name": "Blackout",
+      "fade_s": 1.0,
+      "follow_s": 0.0,
+      "notes": "Clean end cue",
+      "fixture_states": {
+        "MH1": {
+          "intensity": 0,
+          "color": [
+            80,
+            120,
+            255
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "MH2": {
+          "intensity": 0,
+          "color": [
+            80,
+            120,
+            255
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "W1": {
+          "intensity": 0,
+          "color": [
+            80,
+            120,
+            255
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "W2": {
+          "intensity": 0,
+          "color": [
+            80,
+            120,
+            255
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "B1": {
+          "intensity": 0,
+          "color": [
+            80,
+            120,
+            255
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        },
+        "B2": {
+          "intensity": 0,
+          "color": [
+            80,
+            120,
+            255
+          ],
+          "pan": 0.0,
+          "tilt": 0.0,
+          "beam": 25,
+          "shutter_open": true
+        }
+      }
+    }
+  },
+  "timeline": [
+    {
+      "at_s": 0.0,
+      "cue_name": "Intro",
+      "trigger": "timeline"
+    },
+    {
+      "at_s": 6.0,
+      "cue_name": "Drop",
+      "trigger": "timeline"
+    },
+    {
+      "at_s": 11.0,
+      "cue_name": "Blackout",
+      "trigger": "timeline"
+    }
+  ],
+  "effects": {
+    "Pulse": {
+      "name": "Pulse",
+      "effect_type": "intensity_sine",
+      "speed": 4.0,
+      "size": 255,
+      "spread": 0.6,
+      "color_a": [
+        255,
+        64,
+        64
+      ],
+      "color_b": [
+        64,
+        128,
+        255
+      ],
+      "enabled": false
+    },
+    "Color Chase": {
+      "name": "Color Chase",
+      "effect_type": "color_chase",
+      "speed": 2.0,
+      "size": 255,
+      "spread": 0.8,
+      "color_a": [
+        255,
+        64,
+        64
+      ],
+      "color_b": [
+        64,
+        128,
+        255
+      ],
+      "enabled": false
+    },
+    "Orbit": {
+      "name": "Orbit",
+      "effect_type": "pan_tilt_circle",
+      "speed": 1.2,
+      "size": 30,
+      "spread": 0.7,
+      "color_a": [
+        255,
+        64,
+        64
+      ],
+      "color_b": [
+        64,
+        128,
+        255
+      ],
+      "enabled": false
+    }
+  },
+  "palettes": {
+    "Warm Amber": {
+      "name": "Warm Amber",
+      "palette_type": "color",
+      "value": [
+        255,
+        160,
+        60
+      ]
+    },
+    "Electric Blue": {
+      "name": "Electric Blue",
+      "palette_type": "color",
+      "value": [
+        80,
+        120,
+        255
+      ]
+    },
+    "Audience Blind": {
+      "name": "Audience Blind",
+      "palette_type": "beam",
+      "value": 45
+    },
+    "Singer Special": {
+      "name": "Singer Special",
+      "palette_type": "position",
+      "value": {
+        "pan": 0,
+        "tilt": -18
+      }
+    }
+  },
+  "pixel_map": {
+    "width": 16,
+    "height": 8,
+    "effect": "wave",
+    "speed": 1.0,
+    "frame": [
+      [
+        [
+          188,
+          100,
+          67
+        ],
+        [
+          234,
+          100,
+          21
+        ],
+        [
+          254,
+          100,
+          1
+        ],
+        [
+          243,
+          100,
+          12
+        ],
+        [
+          203,
+          100,
+          52
+        ],
+        [
+          145,
+          100,
+          110
+        ],
+        [
+          82,
+          100,
+          173
+        ],
+        [
+          31,
+          100,
+          224
+        ],
+        [
+          2,
+          100,
+          253
+        ],
+        [
+          5,
+          100,
+          250
+        ],
+        [
+          37,
+          100,
+          218
+        ],
+        [
+          91,
+          100,
+          164
+        ],
+        [
+          154,
+          100,
+          101
+        ],
+        [
+          211,
+          100,
+          44
+        ],
+        [
+          247,
+          100,
+          8
+        ],
+        [
+          253,
+          100,
+          2
+        ]
+      ],
+      [
+        [
+          223,
+          100,
+          32
+        ],
+        [
+          251,
+          100,
+          4
+        ],
+        [
+          250,
+          100,
+          5
+        ],
+        [
+          218,
+          100,
+          37
+        ],
+        [
+          164,
+          100,
+          91
+        ],
+        [
+          101,
+          100,
+          154
+        ],
+        [
+          44,
+          100,
+          211
+        ],
+        [
+          8,
+          100,
+          247
+        ],
+        [
+          1,
+          100,
+          254
+        ],
+        [
+          25,
+          100,
+          230
+        ],
+        [
+          73,
+          100,
+          182
+        ],
+        [
+          136,
+          100,
+          119
+        ],
+        [
+          195,
+          100,
+          60
+        ],
+        [
+          239,
+          100,
+          16
+        ],
+        [
+          254,
+          100,
+          1
+        ],
+        [
+          239,
+          100,
+          16
+        ]
+      ],
+      [
+        [
+          246,
+          100,
+          9
+        ],
+        [
+          253,
+          100,
+          2
+        ],
+        [
+          230,
+          100,
+          25
+        ],
+        [
+          181,
+          100,
+          74
+        ],
+        [
+          120,
+          100,
+          135
+        ],
+        [
+          59,
+          100,
+          196
+        ],
+        [
+          16,
+          100,
+          239
+        ],
+        [
+          0,
+          100,
+          255
+        ],
+        [
+          14,
+          100,
+          241
+        ],
+        [
+          57,
+          100,
+          198
+        ],
+        [
+          116,
+          100,
+          139
+        ],
+        [
+          179,
+          100,
+          76
+        ],
+        [
+          228,
+          100,
+          27
+        ],
+        [
+          253,
+          100,
+          2
+        ],
+        [
+          247,
+          100,
+          8
+        ],
+        [
+          212,
+          100,
+          43
+        ]
+      ],
+      [
+        [
+          254,
+          100,
+          1
+        ],
+        [
+          240,
+          100,
+          15
+        ],
+        [
+          198,
+          100,
+          57
+        ],
+        [
+          139,
+          100,
+          116
+        ],
+        [
+          76,
+          100,
+          179
+        ],
+        [
+          26,
+          100,
+          229
+        ],
+        [
+          1,
+          100,
+          254
+        ],
+        [
+          7,
+          100,
+          248
+        ],
+        [
+          42,
+          100,
+          213
+        ],
+        [
+          98,
+          100,
+          157
+        ],
+        [
+          161,
+          100,
+          94
+        ],
+        [
+          215,
+          100,
+          40
+        ],
+        [
+          249,
+          100,
+          6
+        ],
+        [
+          252,
+          100,
+          3
+        ],
+        [
+          225,
+          100,
+          30
+        ],
+        [
+          174,
+          100,
+          81
+        ]
+      ],
+      [
+        [
+          248,
+          100,
+          7
+        ],
+        [
+          213,
+          100,
+          42
+        ],
+        [
+          158,
+          100,
+          97
+        ],
+        [
+          94,
+          100,
+          161
+        ],
+        [
+          39,
+          100,
+          216
+        ],
+        [
+          6,
+          100,
+          249
+        ],
+        [
+          2,
+          100,
+          253
+        ],
+        [
+          28,
+          100,
+          227
+        ],
+        [
+          79,
+          100,
+          176
+        ],
+        [
+          142,
+          100,
+          113
+        ],
+        [
+          201,
+          100,
+          54
+        ],
+        [
+          242,
+          100,
+          13
+        ],
+        [
+          254,
+          100,
+          1
+        ],
+        [
+          236,
+          100,
+          19
+        ],
+        [
+          191,
+          100,
+          64
+        ],
+        [
+          130,
+          100,
+          125
+        ]
+      ],
+      [
+        [
+          226,
+          100,
+          29
+        ],
+        [
+          176,
+          100,
+          79
+        ],
+        [
+          113,
+          100,
+          142
+        ],
+        [
+          54,
+          100,
+          201
+        ],
+        [
+          13,
+          100,
+          242
+        ],
+        [
+          0,
+          100,
+          255
+        ],
+        [
+          17,
+          100,
+          238
+        ],
+        [
+          62,
+          100,
+          193
+        ],
+        [
+          123,
+          100,
+          132
+        ],
+        [
+          184,
+          100,
+          71
+        ],
+        [
+          232,
+          100,
+          23
+        ],
+        [
+          254,
+          100,
+          1
+        ],
+        [
+          245,
+          100,
+          10
+        ],
+        [
+          207,
+          100,
+          48
+        ],
+        [
+          149,
+          100,
+          106
+        ],
+        [
+          86,
+          100,
+          169
+        ]
+      ],
+      [
+        [
+          193,
+          100,
+          62
+        ],
+        [
+          132,
+          100,
+          123
+        ],
+        [
+          71,
+          100,
+          184
+        ],
+        [
+          23,
+          100,
+          232
+        ],
+        [
+          0,
+          100,
+          255
+        ],
+        [
+          9,
+          100,
+          246
+        ],
+        [
+          47,
+          100,
+          208
+        ],
+        [
+          104,
+          100,
+          151
+        ],
+        [
+          167,
+          100,
+          88
+        ],
+        [
+          220,
+          100,
+          35
+        ],
+        [
+          250,
+          100,
+          5
+        ],
+        [
+          251,
+          100,
+          4
+        ],
+        [
+          221,
+          100,
+          34
+        ],
+        [
+          168,
+          100,
+          87
+        ],
+        [
+          105,
+          100,
+          150
+        ],
+        [
+          47,
+          100,
+          208
+        ]
+      ],
+      [
+        [
+          151,
+          100,
+          104
+        ],
+        [
+          88,
+          100,
+          167
+        ],
+        [
+          35,
+          100,
+          220
+        ],
+        [
+          4,
+          100,
+          251
+        ],
+        [
+          3,
+          100,
+          252
+        ],
+        [
+          33,
+          100,
+          222
+        ],
+        [
+          85,
+          100,
+          170
+        ],
+        [
+          148,
+          100,
+          107
+        ],
+        [
+          206,
+          100,
+          49
+        ],
+        [
+          244,
+          100,
+          11
+        ],
+        [
+          254,
+          100,
+          1
+        ],
+        [
+          233,
+          100,
+          22
+        ],
+        [
+          185,
+          100,
+          70
+        ],
+        [
+          124,
+          100,
+          131
+        ],
+        [
+          63,
+          100,
+          192
+        ],
+        [
+          18,
+          100,
+          237
+        ]
+      ]
+    ]
+  },
+  "playhead_s": 0.0,
+  "status_message": "Effects rendered",
+  "groups": [
+    "beam",
+    "spots",
+    "wash"
+  ],
+  "pixel_map_preview": [
+    [
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118
+    ],
+    [
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118
+    ],
+    [
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118
+    ],
+    [
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118,
+      118
+    ]
+  ]
+}

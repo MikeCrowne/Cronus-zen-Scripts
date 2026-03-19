@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LumenFlow Studio</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">LumenFlow Studio</p>
+      <h1>Easy for beginners. Deep enough for programmers.</h1>
+      <p class="lead">A fully functional browser-based lighting control app with fixtures, cues, timeline automation, palettes, effects, pixel mapping, and a built-in tutorial.</p>
+    </div>
+    <div class="hero-actions">
+      <button id="resetDemo">Load Demo Show</button>
+      <button id="saveShow" class="secondary">Save Show</button>
+      <button id="loadShow" class="secondary">Reload Show</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="panel span-2">
+      <div class="panel-title-row">
+        <h2>Show Overview</h2>
+        <span id="statusBadge" class="badge">Ready</span>
+      </div>
+      <div id="showSummary" class="summary-grid"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Transport</h2>
+      <div class="transport-controls">
+        <button id="timelineStart">Run Timeline</button>
+        <button id="timelineStop" class="secondary">Stop</button>
+      </div>
+      <div id="timelineList" class="timeline"></div>
+    </section>
+
+    <section class="panel span-2">
+      <div class="panel-title-row">
+        <h2>Fixture Control</h2>
+        <label class="inline-label">Fixture
+          <select id="fixtureSelect"></select>
+        </label>
+      </div>
+      <div class="fixture-grid">
+        <label>Intensity <input id="fixtureIntensity" type="range" min="0" max="255"></label>
+        <label>Pan <input id="fixturePan" type="range" min="-180" max="180"></label>
+        <label>Tilt <input id="fixtureTilt" type="range" min="-180" max="180"></label>
+        <label>Beam <input id="fixtureBeam" type="range" min="5" max="60"></label>
+        <label>Color <input id="fixtureColor" type="color"></label>
+      </div>
+      <button id="applyFixture">Apply Fixture Changes</button>
+      <div id="fixtureCards" class="fixture-cards"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Groups & Palettes</h2>
+      <label class="block-label">Group Intensity
+        <select id="groupSelect"></select>
+        <input id="groupIntensity" type="range" min="0" max="255" value="180">
+      </label>
+      <button id="applyGroup">Apply to Group</button>
+      <div class="button-list" id="paletteButtons"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Cues</h2>
+      <label class="block-label">Cue Name <input id="cueName" type="text" value="New Cue"></label>
+      <label class="block-label">Fade Seconds <input id="cueFade" type="number" step="0.1" min="0" value="1.0"></label>
+      <button id="recordCue">Record Cue</button>
+      <div id="cueButtons" class="button-list"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Effects</h2>
+      <div id="effectToggles" class="toggle-list"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Pixel Mapping</h2>
+      <label class="block-label">Effect
+        <select id="pixelEffect">
+          <option value="wave">Wave</option>
+          <option value="rainbow">Rainbow</option>
+          <option value="sparkle">Sparkle</option>
+        </select>
+      </label>
+      <label class="block-label">Speed <input id="pixelSpeed" type="range" min="0.1" max="4" step="0.1" value="1.0"></label>
+      <button id="applyPixelMap">Render Pixel Map</button>
+      <pre id="pixelPreview" class="pixel-preview"></pre>
+    </section>
+
+    <section class="panel span-3">
+      <h2>Built-in Tutorial</h2>
+      <article id="tutorialContent" class="tutorial"></article>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
